@@ -41,6 +41,10 @@ interface WordFormDialogProps {
   /** When provided, the dialog edits this word instead of creating a new one. */
   word?: Word;
   onSaved?: (word: Word) => void;
+  /** Also place a newly created word in this deck. The word still lives in the shared vocabulary. */
+  deckId?: string;
+  /** When the typed word already exists, offer to attach that same word to a deck. */
+  onIncludeExisting?: (word: Word) => void;
 }
 
 const empty: WordInput = {
@@ -52,7 +56,7 @@ const empty: WordInput = {
   partOfSpeech: undefined,
 };
 
-export function WordFormDialog({ open, onOpenChange, word, onSaved }: WordFormDialogProps) {
+export function WordFormDialog({ open, onOpenChange, word, onSaved, onIncludeExisting, deckId }: WordFormDialogProps) {
   const { addWord, updateWord, findDuplicate } = useAppData();
   const { t } = useI18n();
   const navigate = useNavigate();
@@ -108,7 +112,7 @@ export function WordFormDialog({ open, onOpenChange, word, onSaved }: WordFormDi
           onOpenChange(false);
         }
       } else {
-        const res = addWord(form);
+        const res = addWord(form, deckId);
         if (!res.ok) {
           showDuplicateToast(res.existing);
         } else {
@@ -158,6 +162,21 @@ export function WordFormDialog({ open, onOpenChange, word, onSaved }: WordFormDi
                   >
                     {t.wordForm.view}
                   </button>
+                  {onIncludeExisting && (
+                    <>
+                      {" · "}
+                      <button
+                        type="button"
+                        className="underline underline-offset-2"
+                        onClick={() => {
+                          onIncludeExisting(duplicate);
+                          onOpenChange(false);
+                        }}
+                      >
+                        {t.review.includeThis}
+                      </button>
+                    </>
+                  )}
                 </p>
               )}
             </div>

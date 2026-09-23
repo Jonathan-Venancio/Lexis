@@ -11,6 +11,7 @@ import type {
   AppData,
   Profile,
   ReviewGrade,
+  Deck,
   Sentence,
   SentenceInput,
   Song,
@@ -19,6 +20,7 @@ import type {
   Word,
   WordInput,
 } from "@/types";
+import { ALL_DECK_ID } from "@/types";
 import { repository, newId, defaultProfile } from "@/services/repository";
 import { normalizeWord } from "@/lib/text";
 import { applyGrade } from "@/lib/srs";
@@ -32,10 +34,15 @@ interface AppDataContextValue extends AppData {
   setTheme: (mode: ThemeMode) => void;
 
   findDuplicate: (term: string, ignoreId?: string) => Word | undefined;
-  addWord: (input: WordInput) => AddWordResult;
+  addWord: (input: WordInput, deckId?: string) => AddWordResult;
   updateWord: (id: string, input: Partial<WordInput>) => AddWordResult | { ok: true };
   deleteWord: (id: string) => void;
   gradeWord: (id: string, grade: ReviewGrade) => Word | undefined;
+
+  createDeck: (name: string, wordIds: string[]) => Deck;
+  deleteDeck: (id: string) => void;
+  addWordsToDeck: (deckId: string, wordIds: string[]) => void;
+  removeWordFromDeck: (deckId: string, wordId: string) => void;
 
   addSentence: (input: SentenceInput) => Sentence;
   updateSentence: (id: string, input: Partial<SentenceInput>) => void;
@@ -56,6 +63,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [words, setWords] = useState<Word[]>([]);
   const [sentences, setSentences] = useState<Sentence[]>([]);
   const [songs, setSongs] = useState<Song[]>([]);
+  const [decks, setDecks] = useState<Deck[]>([]);
   const [profile, setProfile] = useState<Profile>(defaultProfile);
   const [theme, setThemeState] = useState<ThemeMode>("light");
 
@@ -74,6 +82,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       setWords(data.words);
       setSentences(data.sentences);
       setSongs(data.songs);
+      setDecks(data.decks);
       setProfile(data.profile);
       setReady(true);
     });
@@ -105,6 +114,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setSongs(next);
     void repository.saveSongs(next);
   }, []);
+  const commitDecks = useCallback((next: Deck[]) => {
+    setDecks(next);
+    void repository.saveDecks(next);
+  }, []);
 
   // ---- Words ----
   const findDuplicate = useCallback(
@@ -116,7 +129,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   );
 
   const addWord = useCallback(
-    (input: WordInput): AddWordResult => {
+    (input: WordInput, deckId?: string): AddWordResult => {
       const existing = findDuplicate(input.term);
       if (existing) return { ok: false, existing };
       const now = new Date().toISOString();
@@ -138,9 +151,16 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         intervalDays: 0,
       };
       commitWords([word, ...words]);
+      if (deckId && deckId !== ALL_DECK_ID) {
+        commitDecks(
+          decks.map((deck) =>
+            deck.id === deckId ? { ...deck, wordIds: [...new Set([...deck.wordIds, word.id])] } : deck,
+          ),
+        );
+      }
       return { ok: true, word };
     },
-    [words, findDuplicate, commitWords],
+    [words, decks, findDuplicate, commitWords, commitDecks],
   );
 
   const updateWord = useCallback(
@@ -167,8 +187,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   );
 
   const deleteWord = useCallback(
-    (id: string) => commitWords(words.filter((w) => w.id !== id)),
-    [words, commitWords],
+    (id: string) => {
+      commitWords(words.filter((w) => w.id !== id));
+      const nextDecks = decks.map((deck) =>
+        deck.wordIds.includes(id) ? { ...deck, wordIds: deck.wordIds.filter((wordId) => wordId !== id) } : deck,
+      );
+      if (nextDecks.some((deck, index) => deck !== decks[index])) commitDecks(nextDecks);
+    },
+    [words, decks, commitWords, commitDecks],
   );
 
   const gradeWord = useCallback(
@@ -183,6 +209,54 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       return updated;
     },
     [words, commitWords],
+  );
+
+  // ---- Decks ----
+  const createDeck = useCallback(
+    (name: string, wordIds: string[]) => {
+      const known = new Set(words.map((word) => word.id));
+      const deck: Deck = {
+        id: newId("deck"),
+        name: name.trim(),
+        wordIds: [...new Set(wordIds.filter((id) => known.has(id)))],
+        createdAt: new Date().toISOString(),
+      };
+      commitDecks([deck, ...decks]);
+      return deck;
+    },
+    [words, decks, commitDecks],
+  );
+
+  const deleteDeck = useCallback(
+    (id: string) => commitDecks(decks.filter((deck) => deck.id !== id)),
+    [decks, commitDecks],
+  );
+
+  const addWordsToDeck = useCallback(
+    (deckId: string, wordIds: string[]) => {
+      const known = new Set(words.map((word) => word.id));
+      commitDecks(
+        decks.map((deck) => {
+          if (deck.id !== deckId) return deck;
+          const ids = new Set(deck.wordIds);
+          for (const wordId of wordIds) {
+            if (known.has(wordId)) ids.add(wordId);
+          }
+          return { ...deck, wordIds: [...ids] };
+        }),
+      );
+    },
+    [words, decks, commitDecks],
+  );
+
+  const removeWordFromDeck = useCallback(
+    (deckId: string, wordId: string) =>
+      commitDecks(
+        decks.map((deck) =>
+          deck.id === deckId ? { ...deck, wordIds: deck.wordIds.filter((id) => id !== wordId) } : deck,
+        ),
+      ),
+    [decks, commitDecks],
   );
 
   // ---- Sentences ----
@@ -272,6 +346,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setWords(data.words);
     setSentences(data.sentences);
     setSongs(data.songs);
+    setDecks(data.decks);
     setProfile(data.profile);
   }, []);
 
@@ -281,6 +356,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       words,
       sentences,
       songs,
+      decks,
       profile,
       theme,
       toggleTheme,
@@ -290,6 +366,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       updateWord,
       deleteWord,
       gradeWord,
+      createDeck,
+      deleteDeck,
+      addWordsToDeck,
+      removeWordFromDeck,
       addSentence,
       updateSentence,
       deleteSentence,
@@ -300,8 +380,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       resetDemoData,
     }),
     [
-      ready, words, sentences, songs, profile, theme, toggleTheme, setTheme,
+      ready, words, sentences, songs, decks, profile, theme, toggleTheme, setTheme,
       findDuplicate, addWord, updateWord, deleteWord, gradeWord,
+      createDeck, deleteDeck, addWordsToDeck, removeWordFromDeck,
       addSentence, updateSentence, deleteSentence, addSong, updateSong, deleteSong,
       updateProfile, resetDemoData,
     ],

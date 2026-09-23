@@ -77,6 +77,16 @@ export interface ReviewSession {
   finished: boolean;
 }
 
+/** Built-in deck that always contains every saved word. It is not stored. */
+export const ALL_DECK_ID = "all";
+
+export interface Deck {
+  id: string;
+  name: string;
+  wordIds: string[];
+  createdAt: string;
+}
+
 export interface Profile {
   name: string;
   dailyGoal: number;
@@ -89,6 +99,7 @@ export interface AppData {
   words: Word[];
   sentences: Sentence[];
   songs: Song[];
+  decks: Deck[];
   profile: Profile;
 }
 

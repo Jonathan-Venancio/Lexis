@@ -1,5 +1,5 @@
 import type { Locale } from "@/i18n";
-import type { AppData, Profile, Sentence, Song, ThemeMode, Word } from "@/types";
+import type { AppData, Deck, Profile, Sentence, Song, ThemeMode, Word } from "@/types";
 import { mockWords } from "@/data/mockWords";
 import { mockSentences } from "@/data/mockSentences";
 import { mockSongs } from "@/data/mockSongs";
@@ -14,6 +14,7 @@ export interface Repository {
   saveWords(words: Word[]): Promise<void>;
   saveSentences(sentences: Sentence[]): Promise<void>;
   saveSongs(songs: Song[]): Promise<void>;
+  saveDecks(decks: Deck[]): Promise<void>;
   saveProfile(profile: Profile): Promise<void>;
   reset(): Promise<AppData>;
   getTheme(): ThemeMode | null;
@@ -26,6 +27,7 @@ const KEYS = {
   words: "lexis:words",
   sentences: "lexis:sentences",
   songs: "lexis:songs",
+  decks: "lexis:decks",
   profile: "lexis:profile",
   theme: "lexis:theme",
   locale: "lexis:locale",
@@ -48,6 +50,7 @@ function buildDemoData(): AppData {
     words: mockWords.map((w) => ({ ...w })),
     sentences: mockSentences.map((s) => ({ ...s })),
     songs: mockSongs.map((s) => ({ ...s })),
+    decks: [],
     profile: { ...defaultProfile },
   };
 }
@@ -87,6 +90,7 @@ export class LocalStorageRepository implements Repository {
       words: read<Word[]>(KEYS.words, LEGACY.words) ?? [],
       sentences: read<Sentence[]>(KEYS.sentences, LEGACY.sentences) ?? [],
       songs: read<Song[]>(KEYS.songs, LEGACY.songs) ?? [],
+      decks: read<Deck[]>(KEYS.decks) ?? [],
       profile: read<Profile>(KEYS.profile, LEGACY.profile) ?? { ...defaultProfile },
     };
   }
@@ -100,6 +104,9 @@ export class LocalStorageRepository implements Repository {
   async saveSongs(songs: Song[]) {
     write(KEYS.songs, songs);
   }
+  async saveDecks(decks: Deck[]) {
+    write(KEYS.decks, decks);
+  }
   async saveProfile(profile: Profile) {
     write(KEYS.profile, profile);
   }
@@ -109,6 +116,7 @@ export class LocalStorageRepository implements Repository {
     write(KEYS.words, data.words);
     write(KEYS.sentences, data.sentences);
     write(KEYS.songs, data.songs);
+    write(KEYS.decks, data.decks);
     write(KEYS.profile, data.profile);
     window.localStorage.setItem(KEYS.seeded, "1");
     return data;
