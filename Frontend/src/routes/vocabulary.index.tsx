@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { BookOpenText, Plus, Search } from "lucide-react";
 import { useAppData } from "@/hooks/useAppData";
+import { messagesFor, readLocale, useI18n } from "@/i18n";
 import { normalizeWord, countSentencesPerWord } from "@/lib/text";
 import { formatNextReview, formatRelativeDay } from "@/lib/format";
 import { PageHeader, PageLoading } from "@/components/layout/AppShell";
@@ -21,30 +22,26 @@ import type { WordStatus } from "@/types";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/vocabulary/")({
-  head: () => ({
-    meta: [
-      { title: "Vocabulary — Lingo" },
-      { name: "description", content: "Browse, search and manage every word in your personal English vocabulary." },
-      { property: "og:title", content: "Vocabulary — Lingo" },
-      { property: "og:description", content: "Browse, search and manage every word in your personal English vocabulary." },
-    ],
-  }),
+  head: () => {
+    const copy = messagesFor(readLocale());
+    return {
+      meta: [
+        { title: copy.meta.vocabulary },
+        { name: "description", content: copy.meta.vocabularyDescription },
+        { property: "og:title", content: copy.meta.vocabulary },
+        { property: "og:description", content: copy.meta.vocabularyDescription },
+      ],
+    };
+  },
   component: VocabularyPage,
 });
 
 type Filter = "all" | WordStatus;
 type Sort = "recent" | "oldest" | "az" | "za" | "reviewed";
 
-const filters: { value: Filter; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "new", label: "New" },
-  { value: "learning", label: "Learning" },
-  { value: "review", label: "Review" },
-  { value: "mastered", label: "Mastered" },
-];
-
 function VocabularyPage() {
   const { ready, words, sentences } = useAppData();
+  const { t, locale } = useI18n();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [sort, setSort] = useState<Sort>("recent");
@@ -85,11 +82,11 @@ function VocabularyPage() {
   return (
     <div className="fade-up">
       <PageHeader
-        title="Vocabulary"
-        description={`${words.length} words in your personal dictionary`}
+        title={t.vocab.title}
+        description={t.vocab.count(words.length)}
         actions={
           <Button variant="pop" onClick={() => setAddOpen(true)}>
-            <Plus /> Add Word
+            <Plus /> {t.vocab.add}
           </Button>
         }
       />
@@ -98,44 +95,45 @@ function VocabularyPage() {
         <div className="relative flex-1">
           <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search words, translations or definitions…"
+            placeholder={t.vocab.search}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="h-11 rounded-full bg-card pl-10"
-            aria-label="Search vocabulary"
+            aria-label={t.vocab.searchLabel}
           />
         </div>
         <Select value={sort} onValueChange={(v) => setSort(v as Sort)}>
-          <SelectTrigger className="h-11 w-full rounded-full bg-card md:w-48" aria-label="Sort">
+          <SelectTrigger className="h-11 w-full rounded-full bg-card md:w-48" aria-label={t.vocab.sortLabel}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="recent">Recently added</SelectItem>
-            <SelectItem value="oldest">Oldest</SelectItem>
-            <SelectItem value="az">A–Z</SelectItem>
-            <SelectItem value="za">Z–A</SelectItem>
-            <SelectItem value="reviewed">Most reviewed</SelectItem>
+            <SelectItem value="recent">{t.vocab.recent}</SelectItem>
+            <SelectItem value="oldest">{t.vocab.oldest}</SelectItem>
+            <SelectItem value="az">{t.vocab.az}</SelectItem>
+            <SelectItem value="za">{t.vocab.za}</SelectItem>
+            <SelectItem value="reviewed">{t.vocab.reviewed}</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
-      <div className="mb-5 flex flex-wrap gap-2" role="tablist" aria-label="Filter by status">
-        {filters.map((f) => {
-          const n = f.value === "all" ? words.length : words.filter((w) => w.status === f.value).length;
+      <div className="mb-5 flex flex-wrap gap-2" role="tablist" aria-label={t.vocab.filterLabel}>
+        {(["all", "new", "learning", "review", "mastered"] as const).map((value) => {
+          const n = value === "all" ? words.length : words.filter((w) => w.status === value).length;
+          const label = value === "all" ? t.vocab.all : t.status[value];
           return (
             <button
-              key={f.value}
+              key={value}
               role="tab"
-              aria-selected={filter === f.value}
-              onClick={() => setFilter(f.value)}
+              aria-selected={filter === value}
+              onClick={() => setFilter(value)}
               className={cn(
                 "cursor-pointer rounded-full px-4 py-1.5 text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                filter === f.value
+                filter === value
                   ? "bg-ink text-ink-foreground"
                   : "bg-card text-foreground hover:bg-card/70",
               )}
             >
-              {f.label} <span className="ml-1 opacity-50">{n}</span>
+              {label} <span className="ml-1 opacity-50">{n}</span>
             </button>
           );
         })}
@@ -144,16 +142,12 @@ function VocabularyPage() {
       {list.length === 0 ? (
         <EmptyState
           icon={BookOpenText}
-          title={query ? `No words match "${query}"` : "No words here yet"}
-          description={
-            query
-              ? "Try a different search or clear the filters."
-              : "Add a word to start building your vocabulary."
-          }
+          title={query ? t.vocab.noMatch(query) : t.vocab.empty}
+          description={query ? t.vocab.noMatchHint : t.vocab.emptyHint}
           action={
             !query && (
               <Button variant="ink" onClick={() => setAddOpen(true)}>
-                <Plus /> Add Word
+                <Plus /> {t.vocab.add}
               </Button>
             )
           }
@@ -165,13 +159,13 @@ function VocabularyPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  <th className="px-5 py-3">Word</th>
-                  <th className="px-5 py-3">Translation</th>
-                  <th className="px-5 py-3">Part of speech</th>
-                  <th className="px-5 py-3">Status</th>
-                  <th className="px-5 py-3">Date added</th>
-                  <th className="px-5 py-3">Next review</th>
-                  <th className="px-5 py-3">Sentences</th>
+                  <th className="px-5 py-3">{t.vocab.word}</th>
+                  <th className="px-5 py-3">{t.vocab.translation}</th>
+                  <th className="px-5 py-3">{t.vocab.pos}</th>
+                  <th className="px-5 py-3">{t.vocab.status}</th>
+                  <th className="px-5 py-3">{t.vocab.added}</th>
+                  <th className="px-5 py-3">{t.vocab.next}</th>
+                  <th className="px-5 py-3">{t.vocab.sentences}</th>
                 </tr>
               </thead>
               <tbody>
@@ -187,15 +181,13 @@ function VocabularyPage() {
                       </Link>
                     </td>
                     <td className="px-5 py-3 text-muted-foreground">{w.translation}</td>
-                    <td className="px-5 py-3 text-muted-foreground">{w.partOfSpeech ?? "—"}</td>
+                    <td className="px-5 py-3 text-muted-foreground">{w.partOfSpeech ? t.pos[w.partOfSpeech] : "—"}</td>
                     <td className="px-5 py-3">
                       <StatusBadge status={w.status} />
                     </td>
-                    <td className="px-5 py-3 text-muted-foreground">{formatRelativeDay(w.createdAt)}</td>
-                    <td className="px-5 py-3 text-muted-foreground">{formatNextReview(w.nextReviewAt)}</td>
-                    <td className="px-5 py-3 text-muted-foreground">
-                      {counts.get(w.id) ?? 0} {counts.get(w.id) === 1 ? "sentence" : "sentences"}
-                    </td>
+                    <td className="px-5 py-3 text-muted-foreground">{formatRelativeDay(w.createdAt, t, locale)}</td>
+                    <td className="px-5 py-3 text-muted-foreground">{formatNextReview(w.nextReviewAt, t, locale)}</td>
+                    <td className="px-5 py-3 text-muted-foreground">{t.vocab.sentenceCount(counts.get(w.id) ?? 0)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -216,15 +208,15 @@ function VocabularyPage() {
                     <div className="font-display text-lg font-extrabold">{w.term}</div>
                     <div className="text-sm text-muted-foreground">
                       {w.translation}
-                      {w.partOfSpeech && ` · ${w.partOfSpeech}`}
+                      {w.partOfSpeech && ` · ${t.pos[w.partOfSpeech]}`}
                     </div>
                   </div>
                   <StatusBadge status={w.status} />
                 </div>
                 <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                  <span>Added {formatRelativeDay(w.createdAt).toLowerCase()}</span>
-                  <span>Review {formatNextReview(w.nextReviewAt).toLowerCase()}</span>
-                  <span>{counts.get(w.id) ?? 0} sentences</span>
+                  <span>{t.vocab.addedOn(formatRelativeDay(w.createdAt, t, locale).toLowerCase())}</span>
+                  <span>{t.vocab.reviewOn(formatNextReview(w.nextReviewAt, t, locale).toLowerCase())}</span>
+                  <span>{t.vocab.sentenceCount(counts.get(w.id) ?? 0)}</span>
                 </div>
               </Link>
             ))}

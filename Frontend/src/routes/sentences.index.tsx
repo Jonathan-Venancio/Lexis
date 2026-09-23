@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Plus, Quote, Search } from "lucide-react";
 import { useAppData } from "@/hooks/useAppData";
+import { messagesFor, readLocale, useI18n } from "@/i18n";
 import { countSentencesPerWord, findWordsInSentence, normalizeWord, searchSentences } from "@/lib/text";
 import { PageHeader, PageLoading } from "@/components/layout/AppShell";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -13,25 +14,23 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/sentences/")({
-  head: () => ({
-    meta: [
-      { title: "Sentences — Lingo" },
-      {
-        name: "description",
-        content: "Save English sentences and find every phrase that uses a word from your vocabulary.",
-      },
-      { property: "og:title", content: "Sentences — Lingo" },
-      {
-        property: "og:description",
-        content: "Save English sentences and find every phrase that uses a word from your vocabulary.",
-      },
-    ],
-  }),
+  head: () => {
+    const copy = messagesFor(readLocale());
+    return {
+      meta: [
+        { title: copy.meta.sentences },
+        { name: "description", content: copy.meta.sentencesDescription },
+        { property: "og:title", content: copy.meta.sentences },
+        { property: "og:description", content: copy.meta.sentencesDescription },
+      ],
+    };
+  },
   component: SentencesPage,
 });
 
 function SentencesPage() {
   const { ready, sentences, words } = useAppData();
+  const { t } = useI18n();
   const [query, setQuery] = useState("");
   const [addOpen, setAddOpen] = useState(false);
 
@@ -59,19 +58,19 @@ function SentencesPage() {
   if (!ready) return <PageLoading />;
 
   const description = focus
-    ? `${list.length} ${list.length === 1 ? "sentence" : "sentences"} with “${focus.term}”`
+    ? t.sentences.withWord(list.length, focus.term)
     : query.trim()
-      ? `${list.length} ${list.length === 1 ? "sentence" : "sentences"} found`
-      : `${sentences.length} ${sentences.length === 1 ? "sentence" : "sentences"} in your collection`;
+      ? t.sentences.found(list.length)
+      : t.sentences.collection(sentences.length);
 
   return (
     <div className="fade-up">
       <PageHeader
-        title="Sentences"
+        title={t.sentences.title}
         description={description}
         actions={
           <Button variant="pop" onClick={() => setAddOpen(true)}>
-            <Plus /> Add Sentence
+            <Plus /> {t.sentences.add}
           </Button>
         }
       />
@@ -79,16 +78,16 @@ function SentencesPage() {
       <div className="relative mb-4">
         <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
-          placeholder="Search by a word, for example apple"
+          placeholder={t.sentences.search}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="h-11 rounded-full bg-card pl-10"
-          aria-label="Search sentences by word"
+          aria-label={t.sentences.searchLabel}
         />
       </div>
 
       {quickWords.length > 0 && (
-        <div className="mb-5 flex flex-wrap gap-2" aria-label="Quick word filters">
+        <div className="mb-5 flex flex-wrap gap-2" aria-label={t.sentences.filters}>
           {quickWords.map(({ word, count }) => {
             const active = normalizeWord(query) === normalizeWord(word.term);
             return (
@@ -111,15 +110,11 @@ function SentencesPage() {
       {list.length === 0 ? (
         <EmptyState
           icon={Quote}
-          title={query ? `No sentences match “${query.trim()}”` : "No sentences yet"}
-          description={
-            query
-              ? "Try another word, or add a sentence that uses it."
-              : "Add a sentence and Lingo will link it to the words already in your vocabulary."
-          }
+          title={query ? t.sentences.noMatch(query.trim()) : t.sentences.empty}
+          description={query ? t.sentences.noMatchHint : t.sentences.emptyHint}
           action={
             <Button variant="ink" onClick={() => setAddOpen(true)}>
-              <Plus /> Add Sentence
+              <Plus /> {t.sentences.add}
             </Button>
           }
         />

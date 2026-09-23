@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useAppData } from "@/hooks/useAppData";
+import { useI18n } from "@/i18n";
 import { findWordsInSentence } from "@/lib/text";
 import type { Sentence, SentenceInput } from "@/types";
 
@@ -36,6 +37,7 @@ export function SentenceFormDialog({
   onSaved,
 }: SentenceFormDialogProps) {
   const { addSentence, updateSentence, words } = useAppData();
+  const { t } = useI18n();
   const [form, setForm] = useState<SentenceInput>(empty);
   const [saving, setSaving] = useState(false);
 
@@ -66,15 +68,12 @@ export function SentenceFormDialog({
     window.setTimeout(() => {
       if (sentence) {
         updateSentence(sentence.id, form);
-        toast.success("Sentence updated");
+        toast.success(t.sentenceForm.updated);
         onSaved?.({ ...sentence, ...form });
       } else {
         const s = addSentence(form);
-        toast.success("Sentence added", {
-          description:
-            detected.length > 0
-              ? `Linked to ${detected.length} vocabulary word${detected.length === 1 ? "" : "s"}.`
-              : undefined,
+        toast.success(t.sentenceForm.added, {
+          description: detected.length > 0 ? t.sentenceForm.linked(detected.length) : undefined,
         });
         onSaved?.(s);
       }
@@ -89,16 +88,14 @@ export function SentenceFormDialog({
         <form onSubmit={submit} className="contents">
           <DialogHeader>
             <DialogTitle className="font-display text-2xl font-extrabold">
-              {sentence ? "Edit sentence" : "Add sentence"}
+              {sentence ? t.sentenceForm.edit : t.sentenceForm.add}
             </DialogTitle>
-            <DialogDescription>
-              Vocabulary words are detected automatically as you type.
-            </DialogDescription>
+            <DialogDescription>{t.sentenceForm.hint}</DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-4">
             <div className="grid gap-1.5">
-              <Label htmlFor="s-text">English sentence</Label>
+              <Label htmlFor="s-text">{t.sentenceForm.english}</Label>
               <Textarea
                 id="s-text"
                 autoFocus
@@ -110,7 +107,7 @@ export function SentenceFormDialog({
               <div className="flex min-h-6 flex-wrap items-center gap-1.5 pt-1">
                 {detected.length > 0 ? (
                   <>
-                    <span className="text-xs text-muted-foreground">Detected:</span>
+                    <span className="text-xs text-muted-foreground">{t.sentenceForm.detected}</span>
                     {detected.map((w) => (
                       <Badge key={w.id} variant="grape-soft">
                         {w.term}
@@ -119,15 +116,13 @@ export function SentenceFormDialog({
                   </>
                 ) : (
                   form.text.trim() && (
-                    <span className="text-xs text-muted-foreground">
-                      No vocabulary words detected yet.
-                    </span>
+                    <span className="text-xs text-muted-foreground">{t.sentenceForm.none}</span>
                   )
                 )}
               </div>
             </div>
             <div className="grid gap-1.5">
-              <Label htmlFor="s-translation">Translation (optional)</Label>
+              <Label htmlFor="s-translation">{t.sentenceForm.translation}</Label>
               <Input
                 id="s-translation"
                 placeholder="A maçã é vermelha."
@@ -136,7 +131,7 @@ export function SentenceFormDialog({
               />
             </div>
             <div className="grid gap-1.5">
-              <Label htmlFor="s-notes">Notes (optional)</Label>
+              <Label htmlFor="s-notes">{t.sentenceForm.notes}</Label>
               <Textarea
                 id="s-notes"
                 rows={2}
@@ -148,10 +143,10 @@ export function SentenceFormDialog({
 
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              Cancel
+              {t.common.cancel}
             </Button>
             <Button type="submit" variant="pop" disabled={!canSave}>
-              {saving ? "Saving…" : sentence ? "Save changes" : "Add sentence"}
+              {saving ? t.common.saving : sentence ? t.common.saveChanges : t.sentenceForm.save}
             </Button>
           </DialogFooter>
         </form>

@@ -12,16 +12,17 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useAppData } from "@/hooks/useAppData";
+import { useI18n } from "@/i18n";
 import { dueWords } from "@/lib/srs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 const nav = [
-  { to: "/", label: "Home", icon: LayoutGrid, exact: true },
-  { to: "/vocabulary", label: "Vocabulary", icon: BookOpenText },
-  { to: "/sentences", label: "Sentences", icon: Quote },
-  { to: "/review", label: "Review", icon: RotateCcw },
-  { to: "/songs", label: "Songs", icon: Music2 },
+  { to: "/", labelKey: "home", icon: LayoutGrid, exact: true },
+  { to: "/vocabulary", labelKey: "vocabulary", icon: BookOpenText },
+  { to: "/sentences", labelKey: "sentences", icon: Quote },
+  { to: "/review", labelKey: "review", icon: RotateCcw },
+  { to: "/songs", labelKey: "songs", icon: Music2 },
 ] as const;
 
 function Logo({ small }: { small?: boolean }) {
@@ -35,13 +36,14 @@ function Logo({ small }: { small?: boolean }) {
       >
         L
       </span>
-      <span className={cn("font-display font-extrabold", small ? "text-lg" : "text-xl")}>Lingo</span>
+      <span className={cn("font-display font-extrabold", small ? "text-lg" : "text-xl")}>Lexis</span>
     </Link>
   );
 }
 
 function ThemeToggle() {
   const { theme, toggleTheme } = useAppData();
+  const { t } = useI18n();
   const dark = theme === "dark";
   return (
     <Tooltip>
@@ -49,20 +51,21 @@ function ThemeToggle() {
         <button
           type="button"
           onClick={toggleTheme}
-          aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
+          aria-label={dark ? t.theme.toLight : t.theme.toDark}
           className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-full border-2 border-ink px-3 text-sm font-bold transition-colors hover:bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           {dark ? <Moon className="size-4" /> : <Sun className="size-4" />}
-          <span className="hidden sm:inline">{dark ? "Dark" : "Light"}</span>
+          <span className="hidden sm:inline">{dark ? t.theme.dark : t.theme.light}</span>
         </button>
       </TooltipTrigger>
-      <TooltipContent>Toggle theme</TooltipContent>
+      <TooltipContent>{t.theme.toggle}</TooltipContent>
     </Tooltip>
   );
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { ready, words, profile } = useAppData();
+  const { t } = useI18n();
   const due = ready ? dueWords(words).length : 0;
 
   return (
@@ -72,7 +75,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="mb-6">
           <Logo />
         </div>
-        <nav className="flex flex-col gap-1" aria-label="Main">
+        <nav className="flex flex-col gap-1" aria-label={t.nav.main}>
           {nav.map((item) => (
             <Link
               key={item.to}
@@ -81,7 +84,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               className="flex items-center gap-3 rounded-2xl px-4 py-3 font-semibold transition-colors hover:bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[status=active]:bg-ink data-[status=active]:text-ink-foreground data-[status=active]:hover:bg-ink"
             >
               <item.icon className="size-[18px]" />
-              {item.label}
+              {t.nav[item.labelKey]}
               {item.to === "/review" && due > 0 && (
                 <span className="ml-auto rounded-full bg-coral px-2 py-0.5 text-[11px] font-bold text-coral-foreground">
                   {due}
@@ -96,9 +99,9 @@ export function AppShell({ children }: { children: ReactNode }) {
           </span>
           <div>
             <div className="font-display text-lg font-extrabold leading-none">
-              {profile.streakDays} days
+              {t.streak.count(profile.streakDays)}
             </div>
-            <div className="text-xs text-muted-foreground">Current streak</div>
+            <div className="text-xs text-muted-foreground">{t.streak.label}</div>
           </div>
         </div>
         <Link
@@ -106,7 +109,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-muted-foreground transition-colors hover:bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[status=active]:bg-ink data-[status=active]:text-ink-foreground"
         >
           <Settings className="size-4" />
-          Settings
+          {t.nav.settings}
         </Link>
       </aside>
 
@@ -121,7 +124,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <ThemeToggle />
             <Link
               to="/settings"
-              aria-label="Settings"
+              aria-label={t.nav.settings}
               className="grid size-9 place-items-center rounded-full border-2 border-ink transition-colors hover:bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
             >
               <Settings className="size-4" />
@@ -134,7 +137,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       {/* Mobile bottom navigation */}
       <nav
-        aria-label="Main mobile"
+        aria-label={t.nav.mainMobile}
         className="fixed inset-x-0 bottom-0 z-40 flex justify-center gap-2 border-t border-border bg-background/90 px-4 py-3 backdrop-blur lg:hidden"
       >
         {nav.map((item) => (
@@ -142,7 +145,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             key={item.to}
             to={item.to}
             activeOptions={{ exact: "exact" in item && item.exact }}
-            aria-label={item.label}
+            aria-label={t.nav[item.labelKey]}
             className="relative grid size-12 place-items-center rounded-2xl bg-card text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[status=active]:bg-ink data-[status=active]:text-ink-foreground"
           >
             <item.icon className="size-5" />

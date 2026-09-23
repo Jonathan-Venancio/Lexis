@@ -9,6 +9,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { buttonVariants } from "@/components/ui/button";
+import { useI18n } from "@/i18n";
 import { cn } from "@/lib/utils";
 
 interface ConfirmDialogProps {
@@ -27,11 +28,12 @@ export function ConfirmDialog({
   onOpenChange,
   title,
   description,
-  confirmLabel = "Confirm",
-  cancelLabel = "Cancel",
+  confirmLabel,
+  cancelLabel,
   destructive,
   onConfirm,
 }: ConfirmDialogProps) {
+  const { t } = useI18n();
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent className="rounded-3xl">
@@ -41,13 +43,13 @@ export function ConfirmDialog({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel className={cn(buttonVariants({ variant: "ghost" }))}>
-            {cancelLabel}
+            {cancelLabel ?? t.common.cancel}
           </AlertDialogCancel>
           <AlertDialogAction
             onClick={onConfirm}
             className={cn(buttonVariants({ variant: destructive ? "destructive" : "ink" }))}
           >
-            {confirmLabel}
+            {confirmLabel ?? t.common.delete}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

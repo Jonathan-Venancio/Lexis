@@ -7,30 +7,35 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
-import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AppDataProvider } from "@/hooks/useAppData";
+import { I18nProvider, messagesFor, readLocale, type Locale } from "@/i18n";
 import { AppShell } from "@/components/layout/AppShell";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 
+function useDocumentMessages() {
+  const [locale, setLocale] = useState<Locale>("pt");
+  useEffect(() => setLocale(readLocale()), []);
+  return messagesFor(locale);
+}
+
 function NotFoundComponent() {
+  const t = useDocumentMessages();
   return (
     <div className="flex min-h-[60vh] items-center justify-center px-4">
       <div className="max-w-md text-center">
         <h1 className="font-display text-7xl font-extrabold text-foreground">404</h1>
-        <h2 className="mt-4 text-xl font-semibold text-foreground">Page not found</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          The page you're looking for doesn't exist or has been moved.
-        </p>
+        <h2 className="mt-4 text-xl font-semibold text-foreground">{t.notFound.title}</h2>
+        <p className="mt-2 text-sm text-muted-foreground">{t.notFound.hint}</p>
         <div className="mt-6">
           <Link
             to="/"
             className="inline-flex items-center justify-center rounded-full bg-ink px-5 py-2.5 text-sm font-bold text-ink-foreground transition-colors hover:bg-ink/90"
           >
-            Go home
+            {t.notFound.home}
           </Link>
         </div>
       </div>
@@ -39,21 +44,15 @@ function NotFoundComponent() {
 }
 
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+  const t = useDocumentMessages();
   console.error(error);
   const router = useRouter();
-  useEffect(() => {
-    reportLovableError(error, { boundary: "tanstack_root_error_component" });
-  }, [error]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          This page didn't load
-        </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Something went wrong on our end. You can try refreshing or head back home.
-        </p>
+        <h1 className="text-xl font-semibold tracking-tight text-foreground">{t.error.title}</h1>
+        <p className="mt-2 text-sm text-muted-foreground">{t.error.hint}</p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
             onClick={() => {
@@ -62,13 +61,13 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
             }}
             className="inline-flex items-center justify-center rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
-            Try again
+            {t.error.retry}
           </button>
           <a
             href="/"
             className="inline-flex items-center justify-center rounded-full border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
           >
-            Go home
+            {t.error.home}
           </a>
         </div>
       </div>
@@ -81,7 +80,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { name: "author", content: "Lingo" },
+      { name: "author", content: "Lexis" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -99,7 +98,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         // Apply stored theme before paint to avoid a flash of the wrong mode.
         children:
-          "try{var t=localStorage.getItem('lingo:theme');if(t==='dark'||(!t&&matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark')}catch(e){}",
+          "try{var theme=localStorage.getItem('lexis:theme')||localStorage.getItem('lingo:theme');if(theme==='dark'||(!theme&&matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark');var locale=localStorage.getItem('lexis:locale');document.documentElement.lang=locale==='en'?'en':'pt'}catch(e){}",
       },
     ],
   }),
@@ -111,7 +110,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="pt" suppressHydrationWarning>
       <head>
         <HeadContent />
       </head>
@@ -129,13 +128,15 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <AppDataProvider>
-        <TooltipProvider delayDuration={300}>
-          <AppShell>
-            {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-            <Outlet />
-          </AppShell>
-          <Toaster position="bottom-right" richColors closeButton />
-        </TooltipProvider>
+        <I18nProvider>
+          <TooltipProvider delayDuration={300}>
+            <AppShell>
+              {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+              <Outlet />
+            </AppShell>
+            <Toaster position="bottom-right" richColors closeButton />
+          </TooltipProvider>
+        </I18nProvider>
       </AppDataProvider>
     </QueryClientProvider>
   );

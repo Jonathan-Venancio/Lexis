@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { isToday } from "date-fns";
 import { ArrowRight, Plus } from "lucide-react";
 import { useAppData } from "@/hooks/useAppData";
+import { messagesFor, readLocale, useI18n } from "@/i18n";
 import { dueWords } from "@/lib/srs";
 import { greeting } from "@/lib/format";
 import { compareTranslations } from "@/lib/compare";
@@ -13,19 +14,23 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
 export const Route = createFileRoute("/")({
-  head: () => ({
-    meta: [
-      { title: "Lingo — Your daily English vocabulary" },
-      { name: "description", content: "Track your daily goal, streak and words learned in Lingo." },
-      { property: "og:title", content: "Lingo — Your daily English vocabulary" },
-      { property: "og:description", content: "Track your daily goal, streak and words learned in Lingo." },
-    ],
-  }),
+  head: () => {
+    const copy = messagesFor(readLocale());
+    return {
+      meta: [
+        { title: copy.meta.home },
+        { name: "description", content: copy.meta.homeDescription },
+        { property: "og:title", content: copy.meta.home },
+        { property: "og:description", content: copy.meta.homeDescription },
+      ],
+    };
+  },
   component: Dashboard,
 });
 
 function Dashboard() {
   const { ready, words, songs, profile } = useAppData();
+  const { t } = useI18n();
   const [addOpen, setAddOpen] = useState(false);
 
   const stats = useMemo(() => {
@@ -54,25 +59,23 @@ function Dashboard() {
     <div className="fade-up">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <div className="text-sm text-muted-foreground">{greeting(profile.name)}</div>
-          <h1 className="font-display text-3xl font-extrabold md:text-4xl">
-            Ready to learn some English?
-          </h1>
+          <div className="text-sm text-muted-foreground">{greeting(profile.name, t)}</div>
+          <h1 className="font-display text-3xl font-extrabold md:text-4xl">{t.home.ready}</h1>
         </div>
         <Button variant="pop" onClick={() => setAddOpen(true)}>
-          <Plus /> Add Word
+          <Plus /> {t.home.addWord}
         </Button>
       </div>
 
       <section className="grid gap-5 lg:grid-cols-5">
         <div className="rounded-[30px] bg-ink p-8 text-ink-foreground lg:col-span-3">
           <div className="text-sm font-semibold uppercase tracking-[0.2em] text-ink-foreground/50">
-            Daily goal
+            {t.home.dailyGoal}
           </div>
           <div className="mt-2 flex items-end gap-3">
             <span className="font-display text-7xl font-extrabold leading-none">{done}</span>
             <span className="mb-1 font-display text-2xl font-bold text-ink-foreground/40">
-              / {goal} words
+              {t.home.goalOf(goal)}
             </span>
           </div>
           <div
@@ -88,35 +91,33 @@ function Dashboard() {
             />
           </div>
           <div className="mt-4 inline-block rounded-full bg-mint/20 px-4 py-1.5 text-sm font-bold text-mint">
-            {remaining > 0
-              ? `${remaining} more ${remaining === 1 ? "word" : "words"} to reach today's goal.`
-              : "Goal reached — great work today!"}
+            {remaining > 0 ? t.home.remaining(remaining) : t.home.goalReached}
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-3 lg:col-span-2">
-          <Stat label="Total words" value={stats.total} />
-          <Stat label="Learning" value={stats.learning} tone="text-grape" />
-          <Stat label="Mastered" value={stats.mastered} tone="text-mint" />
-          <Stat label="Due for review" value={stats.due} tone="text-coral" />
+          <Stat label={t.home.total} value={stats.total} />
+          <Stat label={t.home.learning} value={stats.learning} tone="text-grape" />
+          <Stat label={t.home.mastered} value={stats.mastered} tone="text-mint" />
+          <Stat label={t.home.due} value={stats.due} tone="text-coral" />
         </div>
       </section>
 
       <section className="mt-8">
         <div className="mb-4 flex items-end justify-between">
-          <h2 className="font-display text-3xl font-extrabold">Today's words</h2>
+          <h2 className="font-display text-3xl font-extrabold">{t.home.todayTitle}</h2>
           <Link
             to="/vocabulary"
             className="text-sm font-bold text-primary underline underline-offset-4"
           >
-            View all →
+            {t.home.viewAll}
           </Link>
         </div>
         {stats.todays.length === 0 ? (
           <div className="surface flex flex-col items-start gap-3 p-6">
-            <p className="text-muted-foreground">No words added today yet.</p>
+            <p className="text-muted-foreground">{t.home.noneToday}</p>
             <Button variant="ink" size="sm" onClick={() => setAddOpen(true)}>
-              <Plus /> Add your first word today
+              <Plus /> {t.home.addFirst}
             </Button>
           </div>
         ) : (
@@ -132,7 +133,7 @@ function Dashboard() {
                   <div className="font-display text-xl font-extrabold">{w.term}</div>
                   <div className="text-sm text-muted-foreground">
                     {w.translation}
-                    {w.partOfSpeech && ` · ${w.partOfSpeech}`}
+                    {w.partOfSpeech && ` · ${t.pos[w.partOfSpeech]}`}
                   </div>
                 </div>
                 <StatusBadge status={w.status} />
@@ -144,41 +145,39 @@ function Dashboard() {
 
       <section className="mt-8 grid gap-5 lg:grid-cols-2">
         <div className="rounded-[26px] bg-grape p-7 text-grape-foreground">
-          <div className="font-display text-2xl font-extrabold">Review session</div>
+          <div className="font-display text-2xl font-extrabold">{t.home.reviewTitle}</div>
           <p className="mt-1 text-grape-foreground/70">
-            {stats.due === 0
-              ? "Nothing due right now. Nice!"
-              : `${stats.due} ${stats.due === 1 ? "card is" : "cards are"} waiting for you.`}
+            {stats.due === 0 ? t.home.nothingDue : t.home.dueCards(stats.due)}
           </p>
           <div className="mt-5 flex items-center gap-2 text-sm font-semibold text-grape-foreground/80">
-            <span className="rounded-full bg-grape-foreground/15 px-3 py-1">{profile.streakDays}-day streak</span>
+            <span className="rounded-full bg-grape-foreground/15 px-3 py-1">{t.home.streakChip(profile.streakDays)}</span>
           </div>
           <Button asChild variant="ink-pop" className="mt-5">
             <Link to="/review">
-              Start review <ArrowRight />
+              {t.home.startReview} <ArrowRight />
             </Link>
           </Button>
         </div>
         <div className="surface p-7">
-          <div className="font-display text-2xl font-extrabold">Songs</div>
+          <div className="font-display text-2xl font-extrabold">{t.home.songsTitle}</div>
           {featuredSong && songStats ? (
             <>
               <p className="mt-1 text-muted-foreground">
                 {featuredSong.title} — {featuredSong.artist}
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
-                <Badge variant="mint-soft">Correct {songStats.correctPct}%</Badge>
-                <Badge variant="sun-soft">Close {songStats.closePct}%</Badge>
-                <Badge variant="coral-soft">Different {songStats.differentPct}%</Badge>
+                <Badge variant="mint-soft">{t.home.correct} {songStats.correctPct}%</Badge>
+                <Badge variant="sun-soft">{t.home.close} {songStats.closePct}%</Badge>
+                <Badge variant="coral-soft">{t.home.different} {songStats.differentPct}%</Badge>
               </div>
               <Button asChild variant="outline" className="mt-5">
                 <Link to="/songs/$songId" params={{ songId: featuredSong.id }} search={{ tab: "compare" }}>
-                  Compare translation <ArrowRight />
+                  {t.home.compare} <ArrowRight />
                 </Link>
               </Button>
             </>
           ) : (
-            <p className="mt-1 text-muted-foreground">Add a song to start translating.</p>
+            <p className="mt-1 text-muted-foreground">{t.home.addSongHint}</p>
           )}
         </div>
       </section>

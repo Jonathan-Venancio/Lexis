@@ -1,3 +1,4 @@
+import type { Locale } from "@/i18n";
 import type { AppData, Profile, Sentence, Song, ThemeMode, Word } from "@/types";
 import { mockWords } from "@/data/mockWords";
 import { mockSentences } from "@/data/mockSentences";
@@ -17,9 +18,21 @@ export interface Repository {
   reset(): Promise<AppData>;
   getTheme(): ThemeMode | null;
   setTheme(mode: ThemeMode): void;
+  getLocale(): Locale;
+  setLocale(locale: Locale): void;
 }
 
 const KEYS = {
+  words: "lexis:words",
+  sentences: "lexis:sentences",
+  songs: "lexis:songs",
+  profile: "lexis:profile",
+  theme: "lexis:theme",
+  locale: "lexis:locale",
+  seeded: "lexis:seeded",
+} as const;
+
+const LEGACY = {
   words: "lingo:words",
   sentences: "lingo:sentences",
   songs: "lingo:songs",
@@ -39,9 +52,19 @@ function buildDemoData(): AppData {
   };
 }
 
-function read<T>(key: string): T | null {
+function rawItem(key: string, legacy?: string): string | null {
+  const current = window.localStorage.getItem(key);
+  if (current != null) return current;
+  if (!legacy) return null;
+  const previous = window.localStorage.getItem(legacy);
+  if (previous == null) return null;
+  window.localStorage.setItem(key, previous);
+  return previous;
+}
+
+function read<T>(key: string, legacy?: string): T | null {
   try {
-    const raw = window.localStorage.getItem(key);
+    const raw = rawItem(key, legacy);
     return raw ? (JSON.parse(raw) as T) : null;
   } catch {
     return null;
@@ -58,13 +81,13 @@ const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 export class LocalStorageRepository implements Repository {
   async load(): Promise<AppData> {
     await wait(250);
-    const seeded = window.localStorage.getItem(KEYS.seeded) === "1";
+    const seeded = rawItem(KEYS.seeded, LEGACY.seeded) === "1";
     if (!seeded) return this.reset();
     return {
-      words: read<Word[]>(KEYS.words) ?? [],
-      sentences: read<Sentence[]>(KEYS.sentences) ?? [],
-      songs: read<Song[]>(KEYS.songs) ?? [],
-      profile: read<Profile>(KEYS.profile) ?? { ...defaultProfile },
+      words: read<Word[]>(KEYS.words, LEGACY.words) ?? [],
+      sentences: read<Sentence[]>(KEYS.sentences, LEGACY.sentences) ?? [],
+      songs: read<Song[]>(KEYS.songs, LEGACY.songs) ?? [],
+      profile: read<Profile>(KEYS.profile, LEGACY.profile) ?? { ...defaultProfile },
     };
   }
 
@@ -92,11 +115,17 @@ export class LocalStorageRepository implements Repository {
   }
 
   getTheme(): ThemeMode | null {
-    const t = window.localStorage.getItem(KEYS.theme);
-    return t === "dark" || t === "light" ? t : null;
+    const theme = rawItem(KEYS.theme, LEGACY.theme);
+    return theme === "dark" || theme === "light" ? theme : null;
   }
   setTheme(mode: ThemeMode) {
     window.localStorage.setItem(KEYS.theme, mode);
+  }
+  getLocale(): Locale {
+    return rawItem(KEYS.locale) === "en" ? "en" : "pt";
+  }
+  setLocale(locale: Locale) {
+    window.localStorage.setItem(KEYS.locale, locale);
   }
 }
 

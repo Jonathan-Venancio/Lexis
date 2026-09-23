@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAppData } from "@/hooks/useAppData";
+import { useI18n } from "@/i18n";
 import type { PartOfSpeech, Word, WordInput } from "@/types";
 
 const PARTS: PartOfSpeech[] = [
@@ -53,6 +54,7 @@ const empty: WordInput = {
 
 export function WordFormDialog({ open, onOpenChange, word, onSaved }: WordFormDialogProps) {
   const { addWord, updateWord, findDuplicate } = useAppData();
+  const { t } = useI18n();
   const navigate = useNavigate();
   const [form, setForm] = useState<WordInput>(empty);
   const [saving, setSaving] = useState(false);
@@ -81,10 +83,10 @@ export function WordFormDialog({ open, onOpenChange, word, onSaved }: WordFormDi
     setForm((f) => ({ ...f, [key]: value }));
 
   const showDuplicateToast = (existing: Word) => {
-    toast.error("Word already exists in your vocabulary.", {
-      description: `"${existing.term}" is already saved.`,
+    toast.error(t.wordForm.exists, {
+      description: t.wordForm.existsHint(existing.term),
       action: {
-        label: "View word",
+        label: t.wordForm.view,
         onClick: () => navigate({ to: "/vocabulary/$wordId", params: { wordId: existing.id } }),
       },
     });
@@ -101,7 +103,7 @@ export function WordFormDialog({ open, onOpenChange, word, onSaved }: WordFormDi
         if (!res.ok) {
           showDuplicateToast(res.existing);
         } else {
-          toast.success("Word updated");
+          toast.success(t.wordForm.updated);
           onSaved?.({ ...word, ...form });
           onOpenChange(false);
         }
@@ -110,7 +112,7 @@ export function WordFormDialog({ open, onOpenChange, word, onSaved }: WordFormDi
         if (!res.ok) {
           showDuplicateToast(res.existing);
         } else {
-          toast.success(`"${res.word.term}" added to your vocabulary`);
+          toast.success(t.wordForm.added(res.word.term));
           onSaved?.(res.word);
           onOpenChange(false);
         }
@@ -125,18 +127,16 @@ export function WordFormDialog({ open, onOpenChange, word, onSaved }: WordFormDi
         <form onSubmit={submit} className="contents">
           <DialogHeader>
             <DialogTitle className="font-display text-2xl font-extrabold">
-              {word ? "Edit word" : "Add word"}
+              {word ? t.wordForm.edit : t.wordForm.add}
             </DialogTitle>
             <DialogDescription>
-              {word
-                ? "Update the details of this word."
-                : "Add a new word to your personal vocabulary."}
+              {word ? t.wordForm.editHint : t.wordForm.addHint}
             </DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-4">
             <div className="grid gap-1.5">
-              <Label htmlFor="term">Word</Label>
+              <Label htmlFor="term">{t.wordForm.word}</Label>
               <Input
                 id="term"
                 autoFocus
@@ -147,7 +147,7 @@ export function WordFormDialog({ open, onOpenChange, word, onSaved }: WordFormDi
               />
               {duplicate && (
                 <p className="text-xs font-semibold text-coral">
-                  This word already exists in your vocabulary.{" "}
+                  {t.wordForm.duplicate}{" "}
                   <button
                     type="button"
                     className="underline underline-offset-2"
@@ -156,14 +156,14 @@ export function WordFormDialog({ open, onOpenChange, word, onSaved }: WordFormDi
                       navigate({ to: "/vocabulary/$wordId", params: { wordId: duplicate.id } });
                     }}
                   >
-                    View word
+                    {t.wordForm.view}
                   </button>
                 </p>
               )}
             </div>
             <div className="grid gap-4 sm:grid-cols-[1fr_150px]">
               <div className="grid gap-1.5">
-                <Label htmlFor="translation">Meaning / Translation</Label>
+                <Label htmlFor="translation">{t.wordForm.meaning}</Label>
                 <Input
                   id="translation"
                   placeholder="alcançar / conseguir"
@@ -172,18 +172,18 @@ export function WordFormDialog({ open, onOpenChange, word, onSaved }: WordFormDi
                 />
               </div>
               <div className="grid gap-1.5">
-                <Label>Part of speech</Label>
+                <Label>{t.wordForm.pos}</Label>
                 <Select
                   value={form.partOfSpeech ?? ""}
                   onValueChange={(v) => set("partOfSpeech", v as PartOfSpeech)}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Optional" />
+                    <SelectValue placeholder={t.common.optional} />
                   </SelectTrigger>
                   <SelectContent>
                     {PARTS.map((p) => (
                       <SelectItem key={p} value={p}>
-                        {p}
+                        {t.pos[p]}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -191,7 +191,7 @@ export function WordFormDialog({ open, onOpenChange, word, onSaved }: WordFormDi
               </div>
             </div>
             <div className="grid gap-1.5">
-              <Label htmlFor="definition">Definition in English</Label>
+              <Label htmlFor="definition">{t.wordForm.definition}</Label>
               <Textarea
                 id="definition"
                 rows={2}
@@ -201,7 +201,7 @@ export function WordFormDialog({ open, onOpenChange, word, onSaved }: WordFormDi
               />
             </div>
             <div className="grid gap-1.5">
-              <Label htmlFor="example">Example sentence</Label>
+              <Label htmlFor="example">{t.wordForm.example}</Label>
               <Textarea
                 id="example"
                 rows={2}
@@ -211,11 +211,11 @@ export function WordFormDialog({ open, onOpenChange, word, onSaved }: WordFormDi
               />
             </div>
             <div className="grid gap-1.5">
-              <Label htmlFor="notes">Notes</Label>
+              <Label htmlFor="notes">{t.wordForm.notes}</Label>
               <Textarea
                 id="notes"
                 rows={2}
-                placeholder="Anything that helps you remember it"
+                placeholder={t.wordForm.notesPlaceholder}
                 value={form.notes ?? ""}
                 onChange={(e) => set("notes", e.target.value)}
               />
@@ -224,10 +224,10 @@ export function WordFormDialog({ open, onOpenChange, word, onSaved }: WordFormDi
 
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              Cancel
+              {t.common.cancel}
             </Button>
             <Button type="submit" variant="pop" disabled={!canSave}>
-              {saving ? "Saving…" : word ? "Save changes" : "Add word"}
+              {saving ? t.common.saving : word ? t.common.saveChanges : t.wordForm.save}
             </Button>
           </DialogFooter>
         </form>

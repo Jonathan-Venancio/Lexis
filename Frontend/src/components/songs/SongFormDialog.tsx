@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useAppData } from "@/hooks/useAppData";
+import { useI18n } from "@/i18n";
 import type { Song, SongInput } from "@/types";
 
 interface SongFormDialogProps {
@@ -34,6 +35,7 @@ const empty: SongInput = {
 
 export function SongFormDialog({ open, onOpenChange, song, onSaved }: SongFormDialogProps) {
   const { addSong, updateSong } = useAppData();
+  const { t } = useI18n();
   const [form, setForm] = useState<SongInput>(empty);
   const [saving, setSaving] = useState(false);
 
@@ -66,11 +68,11 @@ export function SongFormDialog({ open, onOpenChange, song, onSaved }: SongFormDi
     window.setTimeout(() => {
       if (song) {
         updateSong(song.id, form);
-        toast.success("Song updated");
+        toast.success(t.songForm.updated);
         onSaved?.({ ...song, ...form });
       } else {
         const s = addSong(form);
-        toast.success(`"${s.title}" added`);
+        toast.success(t.songForm.added(s.title));
         onSaved?.(s);
       }
       setSaving(false);
@@ -84,43 +86,41 @@ export function SongFormDialog({ open, onOpenChange, song, onSaved }: SongFormDi
         <form onSubmit={submit} className="contents">
           <DialogHeader>
             <DialogTitle className="font-display text-2xl font-extrabold">
-              {song ? "Edit song" : "Add song"}
+              {song ? t.songForm.edit : t.songForm.add}
             </DialogTitle>
-            <DialogDescription>
-              Paste the lyrics line by line — each line becomes a comparison card.
-            </DialogDescription>
+            <DialogDescription>{t.songForm.hint}</DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="grid gap-1.5">
-                <Label htmlFor="song-title">Song title</Label>
+                <Label htmlFor="song-title">{t.songForm.title}</Label>
                 <Input id="song-title" autoFocus value={form.title} onChange={(e) => set("title", e.target.value)} />
               </div>
               <div className="grid gap-1.5">
-                <Label htmlFor="song-artist">Artist</Label>
+                <Label htmlFor="song-artist">{t.songForm.artist}</Label>
                 <Input id="song-artist" value={form.artist} onChange={(e) => set("artist", e.target.value)} />
               </div>
               <div className="grid gap-1.5">
-                <Label htmlFor="song-album">Album (optional)</Label>
+                <Label htmlFor="song-album">{t.songForm.album}</Label>
                 <Input id="song-album" value={form.album ?? ""} onChange={(e) => set("album", e.target.value)} />
               </div>
               <div className="grid gap-1.5">
-                <Label htmlFor="song-url">YouTube / Spotify URL (optional)</Label>
+                <Label htmlFor="song-url">{t.songForm.url}</Label>
                 <Input id="song-url" placeholder="https://" value={form.url ?? ""} onChange={(e) => set("url", e.target.value)} />
               </div>
             </div>
             <div className="grid gap-1.5">
-              <Label htmlFor="song-lyrics">Lyrics in English</Label>
+              <Label htmlFor="song-lyrics">{t.songForm.lyrics}</Label>
               <Textarea id="song-lyrics" rows={6} className="font-mono text-sm" value={form.lyrics} onChange={(e) => set("lyrics", e.target.value)} />
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="grid gap-1.5">
-                <Label htmlFor="song-mine">My translation</Label>
+                <Label htmlFor="song-mine">{t.songForm.mine}</Label>
                 <Textarea id="song-mine" rows={5} className="font-mono text-sm" value={form.myTranslation} onChange={(e) => set("myTranslation", e.target.value)} />
               </div>
               <div className="grid gap-1.5">
-                <Label htmlFor="song-ref">Reference translation</Label>
+                <Label htmlFor="song-ref">{t.songForm.reference}</Label>
                 <Textarea id="song-ref" rows={5} className="font-mono text-sm" value={form.referenceTranslation} onChange={(e) => set("referenceTranslation", e.target.value)} />
               </div>
             </div>
@@ -128,10 +128,10 @@ export function SongFormDialog({ open, onOpenChange, song, onSaved }: SongFormDi
 
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              Cancel
+              {t.common.cancel}
             </Button>
             <Button type="submit" variant="pop" disabled={!canSave}>
-              {saving ? "Saving…" : song ? "Save changes" : "Add song"}
+              {saving ? t.common.saving : song ? t.common.saveChanges : t.songForm.save}
             </Button>
           </DialogFooter>
         </form>

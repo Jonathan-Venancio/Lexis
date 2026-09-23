@@ -3,9 +3,10 @@ import { useMemo, useState } from "react";
 import { ArrowLeft, Pencil, Plus, Quote, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAppData } from "@/hooks/useAppData";
+import { messagesFor, readLocale, useI18n } from "@/i18n";
 import { findSentencesForWord } from "@/lib/text";
 import { successRate } from "@/lib/srs";
-import { formatLongDate, formatNextReview, statusLabel } from "@/lib/format";
+import { formatLongDate, formatNextReview } from "@/lib/format";
 import { PageLoading } from "@/components/layout/AppShell";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -17,20 +18,24 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 export const Route = createFileRoute("/vocabulary/$wordId")({
-  head: () => ({
-    meta: [
-      { title: "Word details — Lingo" },
-      { name: "description", content: "Definition, examples, review stats and every sentence using this word." },
-      { property: "og:title", content: "Word details — Lingo" },
-      { property: "og:description", content: "Definition, examples, review stats and every sentence using this word." },
-    ],
-  }),
+  head: () => {
+    const copy = messagesFor(readLocale());
+    return {
+      meta: [
+        { title: copy.meta.word },
+        { name: "description", content: copy.meta.wordDescription },
+        { property: "og:title", content: copy.meta.word },
+        { property: "og:description", content: copy.meta.wordDescription },
+      ],
+    };
+  },
   component: WordDetailPage,
 });
 
 function WordDetailPage() {
   const { wordId } = Route.useParams();
   const { ready, words, sentences, deleteWord } = useAppData();
+  const { t, locale } = useI18n();
   const navigate = useNavigate();
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -48,11 +53,11 @@ function WordDetailPage() {
     return (
       <EmptyState
         icon={Quote}
-        title="Word not found"
-        description="It may have been deleted."
+        title={t.word.notFound}
+        description={t.word.notFoundHint}
         action={
           <Button asChild variant="ink">
-            <Link to="/vocabulary">Back to vocabulary</Link>
+            <Link to="/vocabulary">{t.word.backToList}</Link>
           </Button>
         }
       />
@@ -61,7 +66,7 @@ function WordDetailPage() {
 
   const onDelete = () => {
     deleteWord(word.id);
-    toast.success(`"${word.term}" deleted`);
+    toast.success(t.word.deleted(word.term));
     navigate({ to: "/vocabulary" });
   };
 
@@ -71,7 +76,7 @@ function WordDetailPage() {
         to="/vocabulary"
         className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-muted-foreground hover:text-foreground"
       >
-        <ArrowLeft className="size-4" /> Vocabulary
+        <ArrowLeft className="size-4" /> {t.word.back}
       </Link>
 
       <div className="surface-lg p-7 md:p-9">
@@ -83,47 +88,47 @@ function WordDetailPage() {
               </h1>
               <StatusBadge status={word.status} />
             </div>
-            <div className="mt-2 text-sm italic text-muted-foreground">{word.partOfSpeech ?? "—"}</div>
+            <div className="mt-2 text-sm italic text-muted-foreground">{word.partOfSpeech ? t.pos[word.partOfSpeech] : "—"}</div>
             <div className="mt-3 font-display text-2xl font-bold text-primary">{word.translation}</div>
           </div>
           <div className="flex gap-2">
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="outline" size="icon" aria-label="Edit word" onClick={() => setEditOpen(true)}>
+                <Button variant="outline" size="icon" aria-label={t.word.editLabel} onClick={() => setEditOpen(true)}>
                   <Pencil />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Edit</TooltipContent>
+              <TooltipContent>{t.common.edit}</TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="outline" size="icon" aria-label="Delete word" onClick={() => setDeleteOpen(true)}>
+                <Button variant="outline" size="icon" aria-label={t.word.deleteLabel} onClick={() => setDeleteOpen(true)}>
                   <Trash2 />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Delete</TooltipContent>
+              <TooltipContent>{t.common.delete}</TooltipContent>
             </Tooltip>
           </div>
         </div>
 
         <div className="mt-8 grid gap-6 md:grid-cols-2">
           <div>
-            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Definition</div>
-            <p className="mt-1 text-lg">{word.definition || <span className="text-muted-foreground">No definition yet.</span>}</p>
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t.word.definition}</div>
+            <p className="mt-1 text-lg">{word.definition || <span className="text-muted-foreground">{t.word.noDefinition}</span>}</p>
           </div>
           <div>
-            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Example</div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t.word.example}</div>
             <p className="mt-1 text-lg">
               {word.example ? (
                 <HighlightedSentence text={word.example} highlightWordId={word.id} />
               ) : (
-                <span className="text-muted-foreground">No example yet.</span>
+                <span className="text-muted-foreground">{t.word.noExample}</span>
               )}
             </p>
           </div>
           {word.notes && (
             <div className="md:col-span-2">
-              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Notes</div>
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t.word.notes}</div>
               <p className="mt-1 text-muted-foreground">{word.notes}</p>
             </div>
           )}
@@ -131,25 +136,21 @@ function WordDetailPage() {
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-5">
-        <Meta label="Added" value={formatLongDate(word.createdAt)} />
-        <Meta label="Reviews" value={String(word.reviewCount)} />
-        <Meta label="Success rate" value={word.reviewCount ? `${successRate(word)}%` : "—"} />
-        <Meta label="Status" value={statusLabel(word.status)} />
-        <Meta label="Next review" value={formatNextReview(word.nextReviewAt)} />
+        <Meta label={t.word.added} value={formatLongDate(word.createdAt, t, locale)} />
+        <Meta label={t.word.reviews} value={String(word.reviewCount)} />
+        <Meta label={t.word.success} value={word.reviewCount ? `${successRate(word)}%` : "—"} />
+        <Meta label={t.word.status} value={t.status[word.status]} />
+        <Meta label={t.word.next} value={formatNextReview(word.nextReviewAt, t, locale)} />
       </div>
 
       <section className="mt-10">
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 className="font-display text-3xl font-extrabold">
-              Sentences with “{word.term}”
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              {related.length} {related.length === 1 ? "sentence" : "sentences"} found
-            </p>
+            <h2 className="font-display text-3xl font-extrabold">{t.word.sentencesTitle(word.term)}</h2>
+            <p className="text-sm text-muted-foreground">{t.word.found(related.length)}</p>
           </div>
           <Button variant="ink" size="sm" onClick={() => setAddSentenceOpen(true)}>
-            <Plus /> Add sentence
+            <Plus /> {t.word.addSentence}
           </Button>
         </div>
 
@@ -157,11 +158,11 @@ function WordDetailPage() {
           <EmptyState
             compact
             icon={Quote}
-            title="No sentences with this word yet."
-            description={`Add a sentence using "${word.term}" to see it here.`}
+            title={t.word.noSentences}
+            description={t.word.noSentencesHint(word.term)}
             action={
               <Button variant="ink" size="sm" onClick={() => setAddSentenceOpen(true)}>
-                <Plus /> Add sentence
+                <Plus /> {t.word.addSentence}
               </Button>
             }
           />
@@ -189,9 +190,9 @@ function WordDetailPage() {
       <ConfirmDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
-        title={`Delete "${word.term}"?`}
-        description="This removes the word and its review history. Sentences are kept."
-        confirmLabel="Delete"
+        title={t.word.deleteTitle(word.term)}
+        description={t.word.deleteHint}
+        confirmLabel={t.common.delete}
         destructive
         onConfirm={onDelete}
       />

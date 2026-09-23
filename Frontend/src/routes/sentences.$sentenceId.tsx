@@ -3,6 +3,7 @@ import { useState } from "react";
 import { ArrowLeft, Pencil, Quote, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAppData } from "@/hooks/useAppData";
+import { messagesFor, readLocale, useI18n } from "@/i18n";
 import { findWordsInSentence } from "@/lib/text";
 import { formatLongDate } from "@/lib/format";
 import { PageLoading } from "@/components/layout/AppShell";
@@ -14,20 +15,24 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 export const Route = createFileRoute("/sentences/$sentenceId")({
-  head: () => ({
-    meta: [
-      { title: "Sentence — Lingo" },
-      { name: "description", content: "Read a sentence and open every vocabulary word it uses." },
-      { property: "og:title", content: "Sentence — Lingo" },
-      { property: "og:description", content: "Read a sentence and open every vocabulary word it uses." },
-    ],
-  }),
+  head: () => {
+    const copy = messagesFor(readLocale());
+    return {
+      meta: [
+        { title: copy.meta.sentence },
+        { name: "description", content: copy.meta.sentenceDescription },
+        { property: "og:title", content: copy.meta.sentence },
+        { property: "og:description", content: copy.meta.sentenceDescription },
+      ],
+    };
+  },
   component: SentenceDetailPage,
 });
 
 function SentenceDetailPage() {
   const { sentenceId } = Route.useParams();
   const { ready, sentences, words, deleteSentence } = useAppData();
+  const { t, locale } = useI18n();
   const navigate = useNavigate();
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -41,11 +46,11 @@ function SentenceDetailPage() {
     return (
       <EmptyState
         icon={Quote}
-        title="Sentence not found"
-        description="It may have been deleted."
+        title={t.sentence.notFound}
+        description={t.sentence.notFoundHint}
         action={
           <Button asChild variant="ink">
-            <Link to="/sentences">Back to sentences</Link>
+            <Link to="/sentences">{t.sentence.backToList}</Link>
           </Button>
         }
       />
@@ -54,7 +59,7 @@ function SentenceDetailPage() {
 
   const onDelete = () => {
     deleteSentence(sentence.id);
-    toast.success("Sentence deleted");
+    toast.success(t.sentence.deleted);
     navigate({ to: "/sentences" });
   };
 
@@ -64,14 +69,14 @@ function SentenceDetailPage() {
         to="/sentences"
         className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-muted-foreground hover:text-foreground"
       >
-        <ArrowLeft className="size-4" /> Sentences
+        <ArrowLeft className="size-4" /> {t.sentence.back}
       </Link>
 
       <div className="surface-lg p-7 md:p-9">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              English
+              {t.sentence.english}
             </div>
             <h1 className="mt-2 font-display text-3xl font-extrabold leading-snug md:text-4xl">
               <HighlightedSentence text={sentence.text} interactive />
@@ -80,24 +85,24 @@ function SentenceDetailPage() {
           <div className="flex gap-2">
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="outline" size="icon" aria-label="Edit sentence" onClick={() => setEditOpen(true)}>
+                <Button variant="outline" size="icon" aria-label={t.sentence.editLabel} onClick={() => setEditOpen(true)}>
                   <Pencil />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Edit</TooltipContent>
+              <TooltipContent>{t.common.edit}</TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   variant="outline"
                   size="icon"
-                  aria-label="Delete sentence"
+                  aria-label={t.sentence.deleteLabel}
                   onClick={() => setDeleteOpen(true)}
                 >
                   <Trash2 />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Delete</TooltipContent>
+              <TooltipContent>{t.common.delete}</TooltipContent>
             </Tooltip>
           </div>
         </div>
@@ -105,19 +110,19 @@ function SentenceDetailPage() {
         <div className="mt-8 grid gap-6 md:grid-cols-2">
           <div>
             <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Translation
+              {t.sentence.translation}
             </div>
             <p className="mt-1 text-lg">
-              {sentence.translation || <span className="text-muted-foreground">No translation yet.</span>}
+              {sentence.translation || <span className="text-muted-foreground">{t.sentence.noTranslation}</span>}
             </p>
           </div>
           <div>
-            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Added</div>
-            <p className="mt-1 text-lg">{formatLongDate(sentence.createdAt)}</p>
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t.sentence.added}</div>
+            <p className="mt-1 text-lg">{formatLongDate(sentence.createdAt, t, locale)}</p>
           </div>
           {sentence.notes && (
             <div className="md:col-span-2">
-              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Notes</div>
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t.sentence.notes}</div>
               <p className="mt-1 text-muted-foreground">{sentence.notes}</p>
             </div>
           )}
@@ -125,22 +130,20 @@ function SentenceDetailPage() {
       </div>
 
       <section className="mt-8">
-        <h2 className="font-display text-3xl font-extrabold">Words in this sentence</h2>
+        <h2 className="font-display text-3xl font-extrabold">{t.sentence.wordsTitle}</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          {linked.length === 0
-            ? "None of your vocabulary words appear here yet."
-            : `${linked.length} ${linked.length === 1 ? "word" : "words"} from your vocabulary`}
+          {linked.length === 0 ? t.sentence.noneYet : t.sentence.linked(linked.length)}
         </p>
         {linked.length === 0 ? (
           <div className="mt-4">
             <EmptyState
               compact
               icon={Quote}
-              title="No linked words"
-              description="Add these words to your vocabulary and they will show up here automatically."
+              title={t.sentence.noLinked}
+              description={t.sentence.noLinkedHint}
               action={
                 <Button asChild variant="ink" size="sm">
-                  <Link to="/vocabulary">Open vocabulary</Link>
+                  <Link to="/vocabulary">{t.sentence.openVocab}</Link>
                 </Button>
               }
             />
@@ -168,9 +171,9 @@ function SentenceDetailPage() {
       <ConfirmDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
-        title="Delete this sentence?"
-        description="The words in your vocabulary stay. Only this sentence is removed."
-        confirmLabel="Delete"
+        title={t.sentence.deleteTitle}
+        description={t.sentence.deleteHint}
+        confirmLabel={t.common.delete}
         destructive
         onConfirm={onDelete}
       />

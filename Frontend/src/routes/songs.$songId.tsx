@@ -3,8 +3,8 @@ import { useMemo, useState } from "react";
 import { ArrowLeft, ExternalLink, Music2, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAppData } from "@/hooks/useAppData";
+import { messagesFor, readLocale, useI18n } from "@/i18n";
 import { compareTranslations, splitLines } from "@/lib/compare";
-import type { LineMatch } from "@/types";
 import { PageLoading } from "@/components/layout/AppShell";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
@@ -24,29 +24,21 @@ export const Route = createFileRoute("/songs/$songId")({
     if (tab === "lyrics" || tab === "translation" || tab === "compare") return { tab };
     return { tab: "lyrics" };
   },
-  head: () => ({
-    meta: [
-      { title: "Song — Lingo" },
-      { name: "description", content: "Read the lyrics, write your translation and compare it line by line." },
-      { property: "og:title", content: "Song — Lingo" },
-      { property: "og:description", content: "Read the lyrics, write your translation and compare it line by line." },
-    ],
-  }),
+  head: () => {
+    const copy = messagesFor(readLocale());
+    return {
+      meta: [
+        { title: copy.meta.song },
+        { name: "description", content: copy.meta.songDescription },
+        { property: "og:title", content: copy.meta.song },
+        { property: "og:description", content: copy.meta.songDescription },
+      ],
+    };
+  },
   component: SongDetailPage,
 });
 
-const tabs: { id: SongTab; label: string }[] = [
-  { id: "lyrics", label: "Lyrics" },
-  { id: "translation", label: "My translation" },
-  { id: "compare", label: "Compare" },
-];
-
-const matchLabel: Record<LineMatch, string> = {
-  correct: "Correct",
-  close: "Close",
-  different: "Different",
-  missing: "Missing",
-};
+const tabIds: SongTab[] = ["lyrics", "translation", "compare"];
 
 const matchVariant = {
   correct: "mint-soft",
@@ -60,6 +52,7 @@ function SongDetailPage() {
   const { tab } = Route.useSearch();
   const navigate = useNavigate();
   const { ready, songs, updateSong, deleteSong } = useAppData();
+  const { t } = useI18n();
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [draft, setDraft] = useState("");
@@ -78,17 +71,22 @@ function SongDetailPage() {
     return (
       <EmptyState
         icon={Music2}
-        title="Song not found"
-        description="It may have been deleted."
+        title={t.song.notFound}
+        description={t.song.notFoundHint}
         action={
           <Button asChild variant="ink">
-            <Link to="/songs">Back to songs</Link>
+            <Link to="/songs">{t.song.backToList}</Link>
           </Button>
         }
       />
     );
   }
 
+  const tabLabel: Record<SongTab, string> = {
+    lyrics: t.song.lyrics,
+    translation: t.song.mine,
+    compare: t.song.compare,
+  };
   const comparison = compareTranslations(song.lyrics, song.myTranslation, song.referenceTranslation);
   const safeUrl = song.url && /^https?:\/\//i.test(song.url) ? song.url : undefined;
 
@@ -103,7 +101,7 @@ function SongDetailPage() {
 
   const onDelete = () => {
     deleteSong(song.id);
-    toast.success(`“${song.title}” deleted`);
+    toast.success(t.song.deleted(song.title));
     navigate({ to: "/songs" });
   };
 
@@ -113,7 +111,7 @@ function SongDetailPage() {
         to="/songs"
         className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-muted-foreground hover:text-foreground"
       >
-        <ArrowLeft className="size-4" /> Songs
+        <ArrowLeft className="size-4" /> {t.song.back}
       </Link>
 
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -128,43 +126,43 @@ function SongDetailPage() {
           {safeUrl && (
             <Button asChild variant="outline">
               <a href={safeUrl} target="_blank" rel="noreferrer">
-                Open link <ExternalLink />
+                {t.song.openLink} <ExternalLink />
               </a>
             </Button>
           )}
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="outline" size="icon" aria-label="Edit song" onClick={() => setEditOpen(true)}>
+              <Button variant="outline" size="icon" aria-label={t.song.editLabel} onClick={() => setEditOpen(true)}>
                 <Pencil />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Edit</TooltipContent>
+            <TooltipContent>{t.common.edit}</TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="outline" size="icon" aria-label="Delete song" onClick={() => setDeleteOpen(true)}>
+              <Button variant="outline" size="icon" aria-label={t.song.deleteLabel} onClick={() => setDeleteOpen(true)}>
                 <Trash2 />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Delete</TooltipContent>
+            <TooltipContent>{t.common.delete}</TooltipContent>
           </Tooltip>
         </div>
       </div>
 
-      <div className="mt-6 flex flex-wrap gap-2" role="tablist" aria-label="Song sections">
-        {tabs.map((item) => (
+      <div className="mt-6 flex flex-wrap gap-2" role="tablist" aria-label={t.song.sections}>
+        {tabIds.map((id) => (
           <button
-            key={item.id}
+            key={id}
             type="button"
             role="tab"
-            aria-selected={tab === item.id}
-            onClick={() => setTab(item.id)}
+            aria-selected={tab === id}
+            onClick={() => setTab(id)}
             className={cn(
               "cursor-pointer rounded-full px-4 py-1.5 text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-              tab === item.id ? "bg-ink text-ink-foreground" : "bg-card text-foreground hover:bg-card/70",
+              tab === id ? "bg-ink text-ink-foreground" : "bg-card text-foreground hover:bg-card/70",
             )}
           >
-            {item.label}
+            {tabLabel[id]}
           </button>
         ))}
       </div>
@@ -178,7 +176,7 @@ function SongDetailPage() {
             onChange={setDraft}
             onSave={() => {
               updateSong(song.id, { myTranslation: draft });
-              toast.success("Translation saved");
+              toast.success(t.song.savedToast);
             }}
           />
         )}
@@ -189,9 +187,9 @@ function SongDetailPage() {
       <ConfirmDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
-        title={`Delete “${song.title}”?`}
-        description="This removes the lyrics and both translations."
-        confirmLabel="Delete"
+        title={t.song.deleteTitle(song.title)}
+        description={t.song.deleteHint}
+        confirmLabel={t.common.delete}
         destructive
         onConfirm={onDelete}
       />
@@ -200,11 +198,12 @@ function SongDetailPage() {
 }
 
 function LyricsPanel({ lyrics }: { lyrics: string }) {
+  const { t } = useI18n();
   const lines = splitLines(lyrics).filter((line) => line.trim().length > 0);
   return (
     <div className="surface-lg p-6 md:p-8">
       <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        Lyrics in English
+        {t.song.lyricsTitle}
       </div>
       <ol className="mt-4 grid gap-3">
         {lines.map((line, index) => (
@@ -231,6 +230,7 @@ function TranslationPanel({
   onChange: (next: string) => void;
   onSave: () => void;
 }) {
+  const { t } = useI18n();
   const dirty = value !== saved;
 
   return (
@@ -238,14 +238,12 @@ function TranslationPanel({
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            My translation
+            {t.song.mineTitle}
           </div>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Keep one line per lyric line, so the comparison stays aligned.
-          </p>
+          <p className="mt-1 text-sm text-muted-foreground">{t.song.mineHint}</p>
         </div>
         <Button variant="pop" disabled={!dirty} onClick={onSave}>
-          {dirty ? "Save translation" : "Saved"}
+          {dirty ? t.song.save : t.song.saved}
         </Button>
       </div>
       <Textarea
@@ -253,8 +251,8 @@ function TranslationPanel({
         onChange={(event) => onChange(event.target.value)}
         rows={14}
         className="mt-4 rounded-2xl bg-background font-mono text-sm"
-        placeholder={"Write your translation here\none line for each lyric line"}
-        aria-label="My translation"
+        placeholder={t.song.placeholder}
+        aria-label={t.song.mineTitle}
       />
     </div>
   );
@@ -267,32 +265,33 @@ function ComparePanel({
   stats: ReturnType<typeof compareTranslations>["stats"];
   lines: ReturnType<typeof compareTranslations>["lines"];
 }) {
+  const { t } = useI18n();
   const visible = useMemo(() => lines.filter((line) => line.original.trim().length > 0), [lines]);
 
   return (
     <div className="grid gap-4">
       <section className="rounded-[30px] bg-ink p-7 text-ink-foreground">
         <div className="text-sm font-semibold uppercase tracking-[0.2em] text-ink-foreground/50">
-          Translation comparison
+          {t.song.comparison}
         </div>
         <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
-          <Stat label="Correct" value={`${stats.correctPct}%`} detail={`${stats.correct} lines`} />
-          <Stat label="Close" value={`${stats.closePct}%`} detail={`${stats.close} lines`} />
-          <Stat label="Different" value={`${stats.differentPct}%`} detail={`${stats.different + stats.missing} lines`} />
-          <Stat label="Lines" value={String(stats.total)} detail="scored" />
+          <Stat label={t.song.correct} value={`${stats.correctPct}%`} detail={t.song.lineCount(stats.correct)} />
+          <Stat label={t.song.close} value={`${stats.closePct}%`} detail={t.song.lineCount(stats.close)} />
+          <Stat label={t.song.different} value={`${stats.differentPct}%`} detail={t.song.lineCount(stats.different + stats.missing)} />
+          <Stat label={t.song.lines} value={String(stats.total)} detail={t.song.scored} />
         </div>
       </section>
 
       {visible.map((line) => (
         <article key={line.index} className="surface p-5 md:p-6">
           <div className="mb-4 flex items-center justify-between gap-3">
-            <span className="text-xs font-bold text-muted-foreground">Line {line.index + 1}</span>
-            <Badge variant={matchVariant[line.match]}>{matchLabel[line.match]}</Badge>
+            <span className="text-xs font-bold text-muted-foreground">{t.song.line(line.index + 1)}</span>
+            <Badge variant={matchVariant[line.match]}>{t.song[line.match]}</Badge>
           </div>
           <div className="grid gap-4 md:grid-cols-3">
-            <Column label="Original" text={line.original} />
-            <Column label="My translation" text={line.mine} empty="You have not translated this line yet." />
-            <Column label="Official translation" text={line.reference} empty="No official translation for this line." />
+            <Column label={t.song.original} text={line.original} />
+            <Column label={t.song.myTranslation} text={line.mine} empty={t.song.mineEmpty} />
+            <Column label={t.song.official} text={line.reference} empty={t.song.officialEmpty} />
           </div>
         </article>
       ))}
