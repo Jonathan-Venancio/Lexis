@@ -76,6 +76,35 @@ export function findWordsInSentence(sentence: Sentence, words: Word[]): Word[] {
   return out;
 }
 
+/** Whole-token match, including simple inflections (apple/apples), never raw substrings. */
+function tokenMatchesQuery(tokenKey: string, query: string): boolean {
+  const queryKeys = new Set(candidates(query));
+  return candidates(tokenKey).some((key) => queryKeys.has(key));
+}
+
+/**
+ * Find sentences by a word or phrase fragment.
+ * "apple" matches "apples", but "car" does not match "care" or "scar".
+ */
+export function searchSentences(sentences: Sentence[], words: Word[], query: string): Sentence[] {
+  const q = normalizeWord(query);
+  if (!q) return sentences;
+
+  const matchedWords = words.filter((word) => {
+    const term = normalizeWord(word.term);
+    return term === q || candidates(q).includes(term) || candidates(term).includes(q);
+  });
+
+  return sentences.filter((sentence) => {
+    if (matchedWords.some((word) => sentenceContainsWord(sentence, word))) return true;
+    if (tokenize(sentence.text).some((token) => token.isWord && tokenMatchesQuery(token.key, q))) {
+      return true;
+    }
+    const haystack = `${sentence.translation ?? ""} ${sentence.notes ?? ""}`.toLowerCase();
+    return haystack.includes(q);
+  });
+}
+
 export function countSentencesPerWord(sentences: Sentence[], words: Word[]): Map<string, number> {
   const counts = new Map<string, number>();
   for (const w of words) counts.set(w.id, 0);

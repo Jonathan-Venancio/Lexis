@@ -10,12 +10,48 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ReviewRouteImport } from './routes/review'
+import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as SentencesIndexRouteImport } from './routes/sentences.index'
+import { Route as SentencesSentenceIdRouteImport } from './routes/sentences.$sentenceId'
+import { Route as SongsIndexRouteImport } from './routes/songs.index'
+import { Route as SongsSongIdRouteImport } from './routes/songs.$songId'
 import { Route as VocabularyIndexRouteImport } from './routes/vocabulary.index'
 import { Route as VocabularyWordIdRouteImport } from './routes/vocabulary.$wordId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReviewRoute = ReviewRouteImport.update({
+  id: '/review',
+  path: '/review',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SentencesIndexRoute = SentencesIndexRouteImport.update({
+  id: '/sentences/',
+  path: '/sentences/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SentencesSentenceIdRoute = SentencesSentenceIdRouteImport.update({
+  id: '/sentences/$sentenceId',
+  path: '/sentences/$sentenceId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SongsIndexRoute = SongsIndexRouteImport.update({
+  id: '/songs/',
+  path: '/songs/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SongsSongIdRoute = SongsSongIdRouteImport.update({
+  id: '/songs/$songId',
+  path: '/songs/$songId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const VocabularyIndexRoute = VocabularyIndexRouteImport.update({
@@ -31,31 +67,83 @@ const VocabularyWordIdRoute = VocabularyWordIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/review': typeof ReviewRoute
+  '/settings': typeof SettingsRoute
+  '/sentences/$sentenceId': typeof SentencesSentenceIdRoute
+  '/songs/$songId': typeof SongsSongIdRoute
   '/vocabulary/$wordId': typeof VocabularyWordIdRoute
+  '/sentences/': typeof SentencesIndexRoute
+  '/songs/': typeof SongsIndexRoute
   '/vocabulary/': typeof VocabularyIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/review': typeof ReviewRoute
+  '/settings': typeof SettingsRoute
+  '/sentences/$sentenceId': typeof SentencesSentenceIdRoute
+  '/songs/$songId': typeof SongsSongIdRoute
   '/vocabulary/$wordId': typeof VocabularyWordIdRoute
+  '/sentences': typeof SentencesIndexRoute
+  '/songs': typeof SongsIndexRoute
   '/vocabulary': typeof VocabularyIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/review': typeof ReviewRoute
+  '/settings': typeof SettingsRoute
+  '/sentences/$sentenceId': typeof SentencesSentenceIdRoute
+  '/songs/$songId': typeof SongsSongIdRoute
   '/vocabulary/$wordId': typeof VocabularyWordIdRoute
+  '/sentences/': typeof SentencesIndexRoute
+  '/songs/': typeof SongsIndexRoute
   '/vocabulary/': typeof VocabularyIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/vocabulary/$wordId' | '/vocabulary/'
+  fullPaths:
+    | '/'
+    | '/review'
+    | '/settings'
+    | '/sentences/$sentenceId'
+    | '/songs/$songId'
+    | '/vocabulary/$wordId'
+    | '/sentences/'
+    | '/songs/'
+    | '/vocabulary/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/vocabulary/$wordId' | '/vocabulary'
-  id: '__root__' | '/' | '/vocabulary/$wordId' | '/vocabulary/'
+  to:
+    | '/'
+    | '/review'
+    | '/settings'
+    | '/sentences/$sentenceId'
+    | '/songs/$songId'
+    | '/vocabulary/$wordId'
+    | '/sentences'
+    | '/songs'
+    | '/vocabulary'
+  id:
+    | '__root__'
+    | '/'
+    | '/review'
+    | '/settings'
+    | '/sentences/$sentenceId'
+    | '/songs/$songId'
+    | '/vocabulary/$wordId'
+    | '/sentences/'
+    | '/songs/'
+    | '/vocabulary/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ReviewRoute: typeof ReviewRoute
+  SettingsRoute: typeof SettingsRoute
+  SentencesSentenceIdRoute: typeof SentencesSentenceIdRoute
+  SongsSongIdRoute: typeof SongsSongIdRoute
   VocabularyWordIdRoute: typeof VocabularyWordIdRoute
+  SentencesIndexRoute: typeof SentencesIndexRoute
+  SongsIndexRoute: typeof SongsIndexRoute
   VocabularyIndexRoute: typeof VocabularyIndexRoute
 }
 
@@ -66,6 +154,48 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/review': {
+      id: '/review'
+      path: '/review'
+      fullPath: '/review'
+      preLoaderRoute: typeof ReviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sentences/': {
+      id: '/sentences/'
+      path: '/sentences'
+      fullPath: '/sentences/'
+      preLoaderRoute: typeof SentencesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sentences/$sentenceId': {
+      id: '/sentences/$sentenceId'
+      path: '/sentences/$sentenceId'
+      fullPath: '/sentences/$sentenceId'
+      preLoaderRoute: typeof SentencesSentenceIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/songs/': {
+      id: '/songs/'
+      path: '/songs'
+      fullPath: '/songs/'
+      preLoaderRoute: typeof SongsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/songs/$songId': {
+      id: '/songs/$songId'
+      path: '/songs/$songId'
+      fullPath: '/songs/$songId'
+      preLoaderRoute: typeof SongsSongIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/vocabulary/': {
@@ -87,7 +217,13 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ReviewRoute: ReviewRoute,
+  SettingsRoute: SettingsRoute,
+  SentencesSentenceIdRoute: SentencesSentenceIdRoute,
+  SongsSongIdRoute: SongsSongIdRoute,
   VocabularyWordIdRoute: VocabularyWordIdRoute,
+  SentencesIndexRoute: SentencesIndexRoute,
+  SongsIndexRoute: SongsIndexRoute,
   VocabularyIndexRoute: VocabularyIndexRoute,
 }
 export const routeTree = rootRouteImport

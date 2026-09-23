@@ -75,7 +75,7 @@ export function WordFormDialog({ open, onOpenChange, word, onSaved }: WordFormDi
   }, [open, word]);
 
   const duplicate = form.term.trim() ? findDuplicate(form.term, word?.id) : undefined;
-  const canSave = form.term.trim() && form.translation.trim() && !saving;
+  const canSave = Boolean(form.term.trim() && form.translation.trim() && !duplicate && !saving);
 
   const set = <K extends keyof WordInput>(key: K, value: WordInput[K]) =>
     setForm((f) => ({ ...f, [key]: value }));
