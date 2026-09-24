@@ -1,0 +1,29 @@
+[project]
+name = "lexis"
+version = "0.1.0"
+description = "API do Lexis"
+readme = "README.md"
+requires-python = ">=3.12,<4.0"
+dependencies = [
+    "fastapi>=0.115.6",
+    "uvicorn[standard]>=0.34.0",
+    "sqlalchemy>=2.0.40",
+    "alembic>=1.16.0",
+    "pydantic-settings>=2.8.0",
+    "psycopg[binary]>=3.2.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.0",
+    "httpx>=0.28.0",
+    "taskipy (>=1.14.1,<2.0.0)",
+]
+
+[tool.poetry]
+package-mode = false
+
+[tool.taskipy.tasks]
+backend = "bash scripts/backend.sh"
+frontend = "bash scripts/frontend.sh"
+run = "bash scripts/dev_terminals.sh"
