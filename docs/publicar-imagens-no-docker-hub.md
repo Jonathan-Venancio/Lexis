@@ -39,7 +39,7 @@ Duas variáveis já vêm com valor de deploy, e as duas podem ser trocadas na ho
 - `CORS_ORIGINS=https://lexis.jonathanvenancio.site`
   O navegador do app chama a API em outro domínio. Sem esse valor, o browser bloqueia a resposta.
 - `DATABASE_URL=sqlite:///./data/lexis.db`
-  Serve para um teste. No servidor, troque pela URL do Postgres: `postgresql+psycopg://USUARIO:SENHA@HOST:5432/lexis`.
+  Serve para um teste. No servidor, na API, preencha `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER` e `DB_PASSWORD`. Com essas quatro obrigatórias (`DB_PORT` pode ficar 5432), a API usa Postgres e ignora o SQLite da imagem.
 - `JWT_SECRET`
   Segredo que assina o token de login. No EasyPanel, na API, coloque um valor longo e aleatório. Sem isso o container sobe com um segredo de desenvolvimento e um token pode ser forjado. Trocar o segredo desloga todo mundo.
 
@@ -155,7 +155,11 @@ A API:
 docker pull USUARIO/lexis-backend:latest
 docker run -d --name lexis-api --restart unless-stopped \
   -p 8000:8000 \
-  -e DATABASE_URL=postgresql+psycopg://USUARIO:SENHA@HOST:5432/lexis \
+  -e DB_HOST=nome-do-postgres \
+  -e DB_PORT=5432 \
+  -e DB_NAME=lexis \
+  -e DB_USER=lexis \
+  -e DB_PASSWORD=senha \
   -e CORS_ORIGINS=https://lexis.jonathanvenancio.site \
   USUARIO/lexis-backend:latest
 ```

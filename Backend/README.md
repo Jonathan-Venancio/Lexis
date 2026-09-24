@@ -1,6 +1,6 @@
 # Lexis API
 
-Python, FastAPI e SQLAlchemy. O backend é gerido pelo Poetry. O banco local é SQLite. No deploy, troque só a variável `DATABASE_URL` para Postgres.
+Python, FastAPI e SQLAlchemy. O backend é gerido pelo Poetry. O banco local é SQLite. No deploy, defina `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER` e `DB_PASSWORD` para usar Postgres.
 
 ```sh
 cd Backend
@@ -27,11 +27,17 @@ Os testes:
 poetry run pytest
 ```
 
-Para Postgres:
+Para Postgres no servidor, na API:
 
 ```sh
-DATABASE_URL=postgresql+psycopg://USUARIO:SENHA@localhost:5432/lexis poetry run alembic upgrade head
+DB_HOST=nome-do-postgres
+DB_PORT=5432
+DB_NAME=lexis
+DB_USER=lexis
+DB_PASSWORD=senha
 ```
+
+Essas variáveis valem mais do que `DATABASE_URL`. Sem elas, o padrão continua sendo SQLite.
 
 O driver `psycopg` já está nas dependências. O restante do código não muda.
 
