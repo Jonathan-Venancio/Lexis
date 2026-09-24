@@ -34,3 +34,5 @@ DATABASE_URL=postgresql+psycopg://USUARIO:SENHA@localhost:5432/lexis poetry run 
 ```
 
 O driver `psycopg` já está nas dependências. O restante do código não muda.
+
+As imagens de deploy são publicadas no Docker Hub pelo GitHub Actions. O passo a passo está em [docs/publicar-imagens-no-docker-hub.md](../docs/publicar-imagens-no-docker-hub.md).
