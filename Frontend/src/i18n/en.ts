@@ -77,9 +77,9 @@ export const en: Messages = {
     months: (n) => `${n} months`,
   },
   greeting: {
-    morning: (name) => `Good morning, ${name}`,
-    afternoon: (name) => `Good afternoon, ${name}`,
-    evening: (name) => `Good evening, ${name}`,
+    morning: (name) => (name ? `Good morning, ${name}` : "Good morning"),
+    afternoon: (name) => (name ? `Good afternoon, ${name}` : "Good afternoon"),
+    evening: (name) => (name ? `Good evening, ${name}` : "Good evening"),
   },
   common: {
     cancel: "Cancel",
@@ -91,6 +91,10 @@ export const en: Messages = {
     back: "Back",
     home: "Home",
     close: "Close",
+    failed: "Couldn’t save that. Try again.",
+    offline: "The server didn’t respond",
+    offlineHint: "Check that the API is running, then try again.",
+    retry: "Try again",
   },
   home: {
     ready: "Ready to learn some English?",

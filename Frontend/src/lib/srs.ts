@@ -72,6 +72,7 @@ export function applyGrade(word: Word, grade: ReviewGrade, now = new Date()): Wo
     nextReviewAt: new Date(now.getTime() + s.delayMs).toISOString(),
     intervalDays: s.intervalDays,
     status: s.status,
+    lastGrade: grade,
   };
 }
 

@@ -4,7 +4,6 @@ import { toast } from "sonner";
 import { useAppData } from "@/hooks/useAppData";
 import { messagesFor, readLocale, useI18n, type Locale } from "@/i18n";
 import { PageHeader, PageLoading } from "@/components/layout/AppShell";
-import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,12 +25,10 @@ export const Route = createFileRoute("/settings")({
 });
 
 function SettingsPage() {
-  const { ready, profile, words, sentences, songs, theme, setTheme, updateProfile, resetDemoData } =
-    useAppData();
+  const { ready, profile, words, sentences, songs, theme, setTheme, updateProfile } = useAppData();
   const { t, locale, setLocale } = useI18n();
   const [name, setName] = useState(profile.name);
   const [goal, setGoal] = useState(String(profile.dailyGoal));
-  const [resetOpen, setResetOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -45,13 +42,18 @@ function SettingsPage() {
   const goalValid = Number.isInteger(goalNumber) && goalNumber >= 1 && goalNumber <= 50;
   const canSave = name.trim().length > 0 && goalValid && !saving;
 
-  const save = (event: React.FormEvent) => {
+  const save = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!canSave) return;
     setSaving(true);
-    updateProfile({ name: name.trim(), dailyGoal: goalNumber });
-    toast.success(t.settings.saved);
-    setSaving(false);
+    try {
+      await updateProfile({ name: name.trim(), dailyGoal: goalNumber });
+      toast.success(t.settings.saved);
+    } catch {
+      toast.error(t.common.failed);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -134,26 +136,6 @@ function SettingsPage() {
         <Mini label={t.settings.sentences} value={sentences.length} />
         <Mini label={t.settings.songs} value={songs.length} />
       </section>
-
-      <section className="surface mt-4 p-6 md:p-8">
-        <h2 className="font-display text-2xl font-extrabold">{t.settings.demoTitle}</h2>
-        <p className="mt-1 max-w-lg text-sm text-muted-foreground">{t.settings.demoHint}</p>
-        <Button variant="outline" className="mt-4" onClick={() => setResetOpen(true)}>
-          {t.settings.reset}
-        </Button>
-      </section>
-
-      <ConfirmDialog
-        open={resetOpen}
-        onOpenChange={setResetOpen}
-        title={t.settings.resetTitle}
-        description={t.settings.resetHint}
-        confirmLabel={t.settings.resetConfirm}
-        destructive
-        onConfirm={() => {
-          void resetDemoData().then(() => toast.success(t.settings.restored));
-        }}
-      />
     </div>
   );
 }

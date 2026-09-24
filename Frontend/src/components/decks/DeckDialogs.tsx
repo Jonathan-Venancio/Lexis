@@ -88,7 +88,7 @@ export function CreateDeckDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   words: Word[];
-  onCreate: (name: string, wordIds: string[]) => void;
+  onCreate: (name: string, wordIds: string[]) => void | Promise<void>;
 }) {
   const { t } = useI18n();
   const [name, setName] = useState("");
@@ -118,11 +118,11 @@ export function CreateDeckDialog({
       <DialogContent>
         <form
           className="contents"
-          onSubmit={(event) => {
+          onSubmit={async (event) => {
             event.preventDefault();
             setTouched(true);
             if (!trimmed) return;
-            onCreate(trimmed, [...selected]);
+            await onCreate(trimmed, [...selected]);
             onOpenChange(false);
           }}
         >
@@ -175,7 +175,7 @@ export function IncludeWordsDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   words: Word[];
-  onInclude: (wordIds: string[]) => void;
+  onInclude: (wordIds: string[]) => void | Promise<void>;
 }) {
   const { t } = useI18n();
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -198,10 +198,10 @@ export function IncludeWordsDialog({
       <DialogContent>
         <form
           className="contents"
-          onSubmit={(event) => {
+          onSubmit={async (event) => {
             event.preventDefault();
             if (selected.size === 0) return;
-            onInclude([...selected]);
+            await onInclude([...selected]);
             onOpenChange(false);
           }}
         >

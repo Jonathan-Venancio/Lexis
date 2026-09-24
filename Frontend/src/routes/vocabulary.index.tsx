@@ -6,7 +6,7 @@ import { messagesFor, readLocale, useI18n } from "@/i18n";
 import { normalizeWord, countSentencesPerWord } from "@/lib/text";
 import { formatNextReview, formatRelativeDay } from "@/lib/format";
 import { PageHeader, PageLoading } from "@/components/layout/AppShell";
-import { StatusBadge } from "@/components/shared/StatusBadge";
+import { WordStateBadge } from "@/components/shared/StatusBadge";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { WordFormDialog } from "@/components/words/WordFormDialog";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { WordStatus } from "@/types";
+import type { ReviewGrade } from "@/types";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/vocabulary/")({
@@ -36,7 +36,7 @@ export const Route = createFileRoute("/vocabulary/")({
   component: VocabularyPage,
 });
 
-type Filter = "all" | WordStatus;
+type Filter = "all" | "new" | ReviewGrade;
 type Sort = "recent" | "oldest" | "az" | "za" | "reviewed";
 
 function VocabularyPage() {
@@ -52,7 +52,8 @@ function VocabularyPage() {
   const list = useMemo(() => {
     const q = normalizeWord(query);
     let out = words.filter((w) => {
-      if (filter !== "all" && w.status !== filter) return false;
+      if (filter === "new" && (w.lastGrade || w.status !== "new")) return false;
+      if (filter !== "all" && filter !== "new" && w.lastGrade !== filter) return false;
       if (!q) return true;
       return (
         normalizeWord(w.term).includes(q) ||
@@ -117,9 +118,14 @@ function VocabularyPage() {
       </div>
 
       <div className="mb-5 flex flex-wrap gap-2" role="tablist" aria-label={t.vocab.filterLabel}>
-        {(["all", "new", "learning", "review", "mastered"] as const).map((value) => {
-          const n = value === "all" ? words.length : words.filter((w) => w.status === value).length;
-          const label = value === "all" ? t.vocab.all : t.status[value];
+        {(["all", "new", "again", "hard", "good", "easy"] as const).map((value) => {
+          const n =
+            value === "all"
+              ? words.length
+              : words.filter((w) =>
+                  value === "new" ? !w.lastGrade && w.status === "new" : w.lastGrade === value,
+                ).length;
+          const label = value === "all" ? t.vocab.all : value === "new" ? t.status.new : t.review[value];
           return (
             <button
               key={value}
@@ -183,7 +189,7 @@ function VocabularyPage() {
                     <td className="px-5 py-3 text-muted-foreground">{w.translation}</td>
                     <td className="px-5 py-3 text-muted-foreground">{w.partOfSpeech ? t.pos[w.partOfSpeech] : "—"}</td>
                     <td className="px-5 py-3">
-                      <StatusBadge status={w.status} />
+                      <WordStateBadge word={w} />
                     </td>
                     <td className="px-5 py-3 text-muted-foreground">{formatRelativeDay(w.createdAt, t, locale)}</td>
                     <td className="px-5 py-3 text-muted-foreground">{formatNextReview(w.nextReviewAt, t, locale)}</td>
@@ -211,7 +217,7 @@ function VocabularyPage() {
                       {w.partOfSpeech && ` · ${t.pos[w.partOfSpeech]}`}
                     </div>
                   </div>
-                  <StatusBadge status={w.status} />
+                  <WordStateBadge word={w} />
                 </div>
                 <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                   <span>{t.vocab.addedOn(formatRelativeDay(w.createdAt, t, locale).toLowerCase())}</span>

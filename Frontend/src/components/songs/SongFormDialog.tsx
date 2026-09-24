@@ -61,23 +61,26 @@ export function SongFormDialog({ open, onOpenChange, song, onSaved }: SongFormDi
     setForm((f) => ({ ...f, [k]: v }));
   const canSave = form.title.trim() && form.artist.trim() && form.lyrics.trim() && !saving;
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSave) return;
     setSaving(true);
-    window.setTimeout(() => {
+    try {
       if (song) {
-        updateSong(song.id, form);
+        await updateSong(song.id, form);
         toast.success(t.songForm.updated);
         onSaved?.({ ...song, ...form });
       } else {
-        const s = addSong(form);
-        toast.success(t.songForm.added(s.title));
-        onSaved?.(s);
+        const created = await addSong(form);
+        toast.success(t.songForm.added(created.title));
+        onSaved?.(created);
       }
-      setSaving(false);
       onOpenChange(false);
-    }, 250);
+    } catch {
+      toast.error(t.common.failed);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (

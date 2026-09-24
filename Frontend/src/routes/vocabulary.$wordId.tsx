@@ -8,7 +8,7 @@ import { findSentencesForWord } from "@/lib/text";
 import { successRate } from "@/lib/srs";
 import { formatLongDate, formatNextReview } from "@/lib/format";
 import { PageLoading } from "@/components/layout/AppShell";
-import { StatusBadge } from "@/components/shared/StatusBadge";
+import { WordStateBadge } from "@/components/shared/StatusBadge";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { WordFormDialog } from "@/components/words/WordFormDialog";
@@ -65,9 +65,10 @@ function WordDetailPage() {
   }
 
   const onDelete = () => {
-    deleteWord(word.id);
-    toast.success(t.word.deleted(word.term));
-    navigate({ to: "/vocabulary" });
+    void deleteWord(word.id).then(() => {
+      toast.success(t.word.deleted(word.term));
+      navigate({ to: "/vocabulary" });
+    });
   };
 
   return (
@@ -86,7 +87,7 @@ function WordDetailPage() {
               <h1 className="font-display text-5xl font-extrabold uppercase tracking-tight md:text-6xl">
                 {word.term}
               </h1>
-              <StatusBadge status={word.status} />
+              <WordStateBadge word={word} />
             </div>
             <div className="mt-2 text-sm italic text-muted-foreground">{word.partOfSpeech ? t.pos[word.partOfSpeech] : "—"}</div>
             <div className="mt-3 font-display text-2xl font-bold text-primary">{word.translation}</div>
@@ -139,7 +140,7 @@ function WordDetailPage() {
         <Meta label={t.word.added} value={formatLongDate(word.createdAt, t, locale)} />
         <Meta label={t.word.reviews} value={String(word.reviewCount)} />
         <Meta label={t.word.success} value={word.reviewCount ? `${successRate(word)}%` : "—"} />
-        <Meta label={t.word.status} value={t.status[word.status]} />
+        <Meta label={t.word.status} value={word.lastGrade ? t.review[word.lastGrade] : t.status[word.status]} />
         <Meta label={t.word.next} value={formatNextReview(word.nextReviewAt, t, locale)} />
       </div>
 

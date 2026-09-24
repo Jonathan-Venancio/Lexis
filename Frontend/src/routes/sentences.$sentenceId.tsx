@@ -58,9 +58,10 @@ function SentenceDetailPage() {
   }
 
   const onDelete = () => {
-    deleteSentence(sentence.id);
-    toast.success(t.sentence.deleted);
-    navigate({ to: "/sentences" });
+    void deleteSentence(sentence.id).then(() => {
+      toast.success(t.sentence.deleted);
+      navigate({ to: "/sentences" });
+    });
   };
 
   return (

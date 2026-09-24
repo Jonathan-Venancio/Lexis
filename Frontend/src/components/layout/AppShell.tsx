@@ -64,9 +64,27 @@ function ThemeToggle() {
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const { ready, words, profile } = useAppData();
+  const { ready, loadError, reload, words, profile } = useAppData();
   const { t } = useI18n();
   const due = ready ? dueWords(words).length : 0;
+
+  if (loadError) {
+    return (
+      <div className="grid min-h-screen place-items-center bg-background px-6 text-center text-foreground">
+        <div className="max-w-md">
+          <h1 className="font-display text-3xl font-extrabold">{t.common.offline}</h1>
+          <p className="mt-2 text-muted-foreground">{t.common.offlineHint}</p>
+          <button
+            type="button"
+            onClick={() => void reload()}
+            className="mt-6 inline-flex h-10 cursor-pointer items-center rounded-full bg-ink px-5 text-sm font-bold text-ink-foreground"
+          >
+            {t.common.retry}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">

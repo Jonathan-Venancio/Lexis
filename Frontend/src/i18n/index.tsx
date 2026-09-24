@@ -2,7 +2,7 @@ import { useRouterState } from "@tanstack/react-router";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { en } from "@/i18n/en";
 import { pt, type Messages } from "@/i18n/pt";
-import { repository } from "@/services/repository";
+import { preferences } from "@/services/preferences";
 
 export type Locale = "pt" | "en";
 export type { Messages };
@@ -11,7 +11,7 @@ const dictionaries: Record<Locale, Messages> = { pt, en };
 
 export function readLocale(): Locale {
   if (typeof window === "undefined") return "pt";
-  return repository.getLocale();
+  return preferences.getLocale();
 }
 
 export function messagesFor(locale: Locale): Messages {
@@ -49,7 +49,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 
   const setLocale = useCallback((next: Locale) => {
     setLocaleState(next);
-    repository.setLocale(next);
+    preferences.setLocale(next);
     document.documentElement.lang = next;
   }, []);
 

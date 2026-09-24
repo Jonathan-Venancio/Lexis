@@ -10,7 +10,7 @@ import { formatNextReview, formatPreview } from "@/lib/format";
 import { PageHeader, PageLoading } from "@/components/layout/AppShell";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { HighlightedSentence } from "@/components/sentences/HighlightedSentence";
-import { StatusBadge } from "@/components/shared/StatusBadge";
+import { WordStateBadge } from "@/components/shared/StatusBadge";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { CreateDeckDialog, IncludeWordsDialog } from "@/components/decks/DeckDialogs";
 import { WordFormDialog } from "@/components/words/WordFormDialog";
@@ -125,13 +125,13 @@ function ReviewPage() {
     setPhase("deck");
   };
 
-  const includeWord = (word: Word) => {
+  const includeWord = async (word: Word) => {
     if (isAll) return;
     if (membership.some((item) => item.id === word.id)) {
       toast.message(t.review.alreadyHere);
       return;
     }
-    addWordsToDeck(deckId, [word.id]);
+    await addWordsToDeck(deckId, [word.id]);
     toast.success(t.review.included(1));
   };
 
@@ -168,8 +168,8 @@ function ReviewPage() {
             ? {}
             : {
                 onInclude: () => setIncludeOpen(true),
-                onRemove: (word: Word) => {
-                  removeWordFromDeck(deckId, word.id);
+                onRemove: async (word: Word) => {
+                  await removeWordFromDeck(deckId, word.id);
                   toast.success(t.review.removed(word.term));
                 },
                 onDelete: () => setDeleteOpen(true),
@@ -204,10 +204,15 @@ function ReviewPage() {
         open={createOpen}
         onOpenChange={setCreateOpen}
         words={words}
-        onCreate={(name, wordIds) => {
-          const deck = createDeck(name, wordIds);
-          toast.success(t.review.created(deck.name));
-          openDeck(deck.id);
+        onCreate={async (name, wordIds) => {
+          try {
+            const deck = await createDeck(name, wordIds);
+            toast.success(t.review.created(deck.name));
+            openDeck(deck.id);
+          } catch {
+            toast.error(t.common.failed);
+            throw new Error("deck");
+          }
         }}
       />
       <WordFormDialog
@@ -219,8 +224,8 @@ function ReviewPage() {
         open={includeOpen}
         onOpenChange={setIncludeOpen}
         words={outside}
-        onInclude={(ids) => {
-          addWordsToDeck(deckId, ids);
+        onInclude={async (ids) => {
+          await addWordsToDeck(deckId, ids);
           toast.success(t.review.included(ids.length));
         }}
       />
@@ -233,9 +238,10 @@ function ReviewPage() {
           confirmLabel={t.review.deleteDeck}
           destructive
           onConfirm={() => {
-            deleteDeck(custom.id);
-            toast.success(t.review.deleted(custom.name));
-            setPhase("decks");
+            void deleteDeck(custom.id).then(() => {
+              toast.success(t.review.deleted(custom.name));
+              setPhase("decks");
+            });
           }}
         />
       )}
@@ -415,7 +421,7 @@ function DeckDetail({
                 <div className="font-display text-lg font-extrabold">{word.term}</div>
                 <div className="truncate text-sm text-muted-foreground">{word.translation}</div>
               </Link>
-              <StatusBadge status={word.status} />
+              <WordStateBadge word={word} />
               {onRemove && (
                 <Button variant="ghost" size="sm" onClick={() => onRemove(word)}>
                   {t.review.remove}

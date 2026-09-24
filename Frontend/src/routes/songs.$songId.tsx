@@ -100,9 +100,10 @@ function SongDetailPage() {
   };
 
   const onDelete = () => {
-    deleteSong(song.id);
-    toast.success(t.song.deleted(song.title));
-    navigate({ to: "/songs" });
+    void deleteSong(song.id).then(() => {
+      toast.success(t.song.deleted(song.title));
+      navigate({ to: "/songs" });
+    });
   };
 
   return (
@@ -175,8 +176,7 @@ function SongDetailPage() {
             saved={song.myTranslation}
             onChange={setDraft}
             onSave={() => {
-              updateSong(song.id, { myTranslation: draft });
-              toast.success(t.song.savedToast);
+              void updateSong(song.id, { myTranslation: draft }).then(() => toast.success(t.song.savedToast));
             }}
           />
         )}

@@ -61,25 +61,28 @@ export function SentenceFormDialog({
 
   const canSave = form.text.trim().length > 0 && !saving;
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSave) return;
     setSaving(true);
-    window.setTimeout(() => {
+    try {
       if (sentence) {
-        updateSentence(sentence.id, form);
+        await updateSentence(sentence.id, form);
         toast.success(t.sentenceForm.updated);
         onSaved?.({ ...sentence, ...form });
       } else {
-        const s = addSentence(form);
+        const created = await addSentence(form);
         toast.success(t.sentenceForm.added, {
           description: detected.length > 0 ? t.sentenceForm.linked(detected.length) : undefined,
         });
-        onSaved?.(s);
+        onSaved?.(created);
       }
-      setSaving(false);
       onOpenChange(false);
-    }, 250);
+    } catch {
+      toast.error(t.common.failed);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (

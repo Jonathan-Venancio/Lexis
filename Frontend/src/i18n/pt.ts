@@ -75,9 +75,9 @@ export const pt = {
     months: (n: number) => `${n} meses`,
   },
   greeting: {
-    morning: (name: string) => `Bom dia, ${name}`,
-    afternoon: (name: string) => `Boa tarde, ${name}`,
-    evening: (name: string) => `Boa noite, ${name}`,
+    morning: (name: string) => (name ? `Bom dia, ${name}` : "Bom dia"),
+    afternoon: (name: string) => (name ? `Boa tarde, ${name}` : "Boa tarde"),
+    evening: (name: string) => (name ? `Boa noite, ${name}` : "Boa noite"),
   },
   common: {
     cancel: "Cancelar",
@@ -89,6 +89,10 @@ export const pt = {
     back: "Voltar",
     home: "Início",
     close: "Fechar",
+    failed: "Não consegui salvar. Tente de novo.",
+    offline: "O servidor não respondeu",
+    offlineHint: "Confira se a API está rodando e tente de novo.",
+    retry: "Tentar de novo",
   },
   home: {
     ready: "Pronto para aprender inglês?",

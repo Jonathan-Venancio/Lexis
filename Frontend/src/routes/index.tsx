@@ -8,7 +8,7 @@ import { dueWords } from "@/lib/srs";
 import { greeting } from "@/lib/format";
 import { compareTranslations } from "@/lib/compare";
 import { PageLoading } from "@/components/layout/AppShell";
-import { StatusBadge } from "@/components/shared/StatusBadge";
+import { WordStateBadge } from "@/components/shared/StatusBadge";
 import { WordFormDialog } from "@/components/words/WordFormDialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -136,7 +136,7 @@ function Dashboard() {
                     {w.partOfSpeech && ` · ${t.pos[w.partOfSpeech]}`}
                   </div>
                 </div>
-                <StatusBadge status={w.status} />
+                <WordStateBadge word={w} />
               </Link>
             ))}
           </div>

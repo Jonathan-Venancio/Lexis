@@ -96,14 +96,13 @@ export function WordFormDialog({ open, onOpenChange, word, onSaved, onIncludeExi
     });
   };
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSave) return;
     setSaving(true);
-    // Small simulated latency so the UI shows a saving state
-    window.setTimeout(() => {
+    try {
       if (word) {
-        const res = updateWord(word.id, form);
+        const res = await updateWord(word.id, form);
         if (!res.ok) {
           showDuplicateToast(res.existing);
         } else {
@@ -112,7 +111,7 @@ export function WordFormDialog({ open, onOpenChange, word, onSaved, onIncludeExi
           onOpenChange(false);
         }
       } else {
-        const res = addWord(form, deckId);
+        const res = await addWord(form, deckId);
         if (!res.ok) {
           showDuplicateToast(res.existing);
         } else {
@@ -121,8 +120,11 @@ export function WordFormDialog({ open, onOpenChange, word, onSaved, onIncludeExi
           onOpenChange(false);
         }
       }
+    } catch {
+      toast.error(t.common.failed);
+    } finally {
       setSaving(false);
-    }, 250);
+    }
   };
 
   return (

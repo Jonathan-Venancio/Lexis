@@ -19,6 +19,8 @@ export interface Word {
   notes?: string;
   partOfSpeech?: PartOfSpeech;
   status: WordStatus;
+  /** Last review button the user pressed. Empty until the word is reviewed. */
+  lastGrade: ReviewGrade | null;
   createdAt: string; // ISO
   // Spaced repetition state
   difficulty: number; // 1 (easy) .. 5 (hard)
