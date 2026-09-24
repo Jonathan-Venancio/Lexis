@@ -21,7 +21,14 @@ export default defineConfig({
     tanstackStart({
       server: { entry: "server" },
     }),
-    nitro(),
+    nitro({
+      devProxy: {
+        "/api/**": {
+          target: "http://127.0.0.1:8000",
+          changeOrigin: true,
+        },
+      },
+    }),
     viteReact(),
     tailwindcss(),
   ],

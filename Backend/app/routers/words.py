@@ -6,8 +6,9 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Deck, DeckWord, Word
+from app.models import Deck, DeckWord, User, Word
 from app.schemas import GradeIn, WordCreate, WordOut, WordUpdate
+from app.security import get_current_user
 from app.srs import apply_grade
 
 router = APIRouter(prefix="/api/words", tags=["words"])
@@ -33,22 +34,23 @@ def duplicate(existing: Word) -> HTTPException:
     return HTTPException(status_code=409, detail={"code": "duplicate", "word": payload})
 
 
-def get_word_or_404(db: Session, word_id: str) -> Word:
+def get_word_or_404(db: Session, word_id: str, user_id: str) -> Word:
     word = db.get(Word, word_id)
-    if word is None:
+    if word is None or word.user_id != user_id:
         raise HTTPException(status_code=404, detail="Word not found")
     return word
 
 
 @router.get("", response_model=list[WordOut])
-def list_words(db: Session = Depends(get_db)) -> list[Word]:
-    return list(db.scalars(select(Word).order_by(Word.created_at.desc())))
+def list_words(user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> list[Word]:
+    return list(db.scalars(select(Word).where(Word.user_id == user.id).order_by(Word.created_at.desc())))
 
 
 @router.post("", response_model=WordOut, status_code=201)
 def create_word(
     payload: WordCreate,
     deck_id: str | None = Query(default=None, alias="deckId"),
+    user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> Word:
     term = payload.term.strip()
@@ -56,19 +58,20 @@ def create_word(
     key = normalize_term(term)
     if not key or not translation:
         raise HTTPException(status_code=422, detail="Term and translation are required")
-    existing = db.scalar(select(Word).where(Word.term_key == key))
+    existing = db.scalar(select(Word).where(Word.user_id == user.id, Word.term_key == key))
     if existing is not None:
         raise duplicate(existing)
 
     deck = None
     if deck_id:
         deck = db.get(Deck, deck_id)
-        if deck is None:
+        if deck is None or deck.user_id != user.id:
             raise HTTPException(status_code=404, detail="Deck not found")
 
     now = datetime.now(timezone.utc)
     word = Word(
         id=new_id("w"),
+        user_id=user.id,
         term=term,
         term_key=key,
         translation=translation,
@@ -95,15 +98,20 @@ def create_word(
 
 
 @router.patch("/{word_id}", response_model=WordOut)
-def update_word(word_id: str, payload: WordUpdate, db: Session = Depends(get_db)) -> Word:
-    word = get_word_or_404(db, word_id)
+def update_word(
+    word_id: str,
+    payload: WordUpdate,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> Word:
+    word = get_word_or_404(db, word_id, user.id)
     data = payload.model_dump(exclude_unset=True)
     if "term" in data:
         term = (data["term"] or "").strip()
         key = normalize_term(term)
         if not key:
             raise HTTPException(status_code=422, detail="Term is required")
-        existing = db.scalar(select(Word).where(Word.term_key == key, Word.id != word.id))
+        existing = db.scalar(select(Word).where(Word.user_id == user.id, Word.term_key == key, Word.id != word.id))
         if existing is not None:
             raise duplicate(existing)
         word.term = term
@@ -127,15 +135,20 @@ def update_word(word_id: str, payload: WordUpdate, db: Session = Depends(get_db)
 
 
 @router.delete("/{word_id}", status_code=204)
-def delete_word(word_id: str, db: Session = Depends(get_db)) -> None:
-    word = get_word_or_404(db, word_id)
+def delete_word(word_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> None:
+    word = get_word_or_404(db, word_id, user.id)
     db.delete(word)
     db.commit()
 
 
 @router.post("/{word_id}/grade", response_model=WordOut)
-def grade_word(word_id: str, payload: GradeIn, db: Session = Depends(get_db)) -> Word:
-    word = get_word_or_404(db, word_id)
+def grade_word(
+    word_id: str,
+    payload: GradeIn,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> Word:
+    word = get_word_or_404(db, word_id, user.id)
     apply_grade(word, payload.grade)
     db.commit()
     db.refresh(word)

@@ -11,6 +11,7 @@ import {
   Sun,
 } from "lucide-react";
 import type { ReactNode } from "react";
+import { AuthScreen } from "@/components/auth/AuthScreen";
 import { useAppData } from "@/hooks/useAppData";
 import { useI18n } from "@/i18n";
 import { dueWords } from "@/lib/srs";
@@ -64,9 +65,13 @@ function ThemeToggle() {
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const { ready, loadError, reload, words, profile } = useAppData();
+  const { ready, signedIn, loadError, reload, words, profile } = useAppData();
   const { t } = useI18n();
   const due = ready ? dueWords(words).length : 0;
+
+  if (!ready && !loadError) {
+    return <div className="min-h-screen bg-background" />;
+  }
 
   if (loadError) {
     return (
@@ -85,6 +90,8 @@ export function AppShell({ children }: { children: ReactNode }) {
       </div>
     );
   }
+
+  if (!signedIn) return <AuthScreen />;
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">

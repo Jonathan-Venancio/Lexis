@@ -4,6 +4,7 @@ import type { ThemeMode } from "@/types";
 const THEME_KEY = "lexis:theme";
 const THEME_LEGACY = "lingo:theme";
 const LOCALE_KEY = "lexis:locale";
+const TOKEN_KEY = "lexis:token";
 
 function rawItem(key: string, legacy?: string): string | null {
   const current = window.localStorage.getItem(key);
@@ -29,5 +30,14 @@ export const preferences = {
   },
   setLocale(locale: Locale) {
     window.localStorage.setItem(LOCALE_KEY, locale);
+  },
+  getToken(): string | null {
+    return window.localStorage.getItem(TOKEN_KEY);
+  },
+  setToken(token: string) {
+    window.localStorage.setItem(TOKEN_KEY, token);
+  },
+  clearToken() {
+    window.localStorage.removeItem(TOKEN_KEY);
   },
 };

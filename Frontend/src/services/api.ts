@@ -1,4 +1,5 @@
 import type { Deck, Profile, Sentence, SentenceInput, Song, SongInput, Word, WordInput } from "@/types";
+import { preferences } from "@/services/preferences";
 
 const base = import.meta.env.VITE_API_URL ?? "";
 
@@ -13,10 +14,17 @@ export class ApiError extends Error {
   }
 }
 
+function authHeader(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  const token = preferences.getToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${base}${path}`, {
     ...init,
     headers: {
+      ...authHeader(),
       ...(init?.body ? { "Content-Type": "application/json" } : {}),
       ...init?.headers,
     },
@@ -70,7 +78,26 @@ export interface Bootstrap {
   profile: Profile;
 }
 
+export interface AuthSession {
+  token: string;
+  user: { email: string; name: string };
+}
+
 export const api = {
+  login(email: string, password: string) {
+    return request<AuthSession>("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    });
+  },
+
+  register(email: string, password: string, name: string) {
+    return request<AuthSession>("/api/auth/register", {
+      method: "POST",
+      body: JSON.stringify({ email, password, name }),
+    });
+  },
+
   async bootstrap(): Promise<Bootstrap> {
     const data = await request<Bootstrap>("/api/bootstrap");
     return {

@@ -148,8 +148,25 @@ class DeckWordsIn(APIModel):
 
 class ProfileOut(APIModel):
     name: str
+    email: str
     daily_goal: int
     streak_days: int
+
+
+class AuthIn(APIModel):
+    email: str
+    password: str
+    name: str | None = None
+
+
+class AuthUser(APIModel):
+    email: str
+    name: str
+
+
+class AuthOut(APIModel):
+    token: str
+    user: AuthUser
 
 
 class ProfileUpdate(APIModel):

@@ -44,9 +44,31 @@ function isH3SwallowedErrorBody(body: string): boolean {
   }
 }
 
+const API_ORIGIN = "http://127.0.0.1:8000";
+
+async function proxyApi(request: Request): Promise<Response> {
+  const url = new URL(request.url);
+  const headers = new Headers(request.headers);
+  headers.delete("host");
+  const init: RequestInit & { duplex?: "half" } = {
+    method: request.method,
+    headers,
+    redirect: "manual",
+  };
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    init.body = request.body;
+    init.duplex = "half";
+  }
+  return fetch(new URL(url.pathname + url.search, API_ORIGIN), init);
+}
+
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
+      const url = new URL(request.url);
+      if (process.env.NODE_ENV !== "production" && url.pathname.startsWith("/api")) {
+        return await proxyApi(request);
+      }
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
       return await normalizeCatastrophicSsrResponse(response);

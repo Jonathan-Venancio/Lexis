@@ -25,7 +25,7 @@ export const Route = createFileRoute("/settings")({
 });
 
 function SettingsPage() {
-  const { ready, profile, words, sentences, songs, theme, setTheme, updateProfile } = useAppData();
+  const { ready, profile, words, sentences, songs, theme, setTheme, updateProfile, logout } = useAppData();
   const { t, locale, setLocale } = useI18n();
   const [name, setName] = useState(profile.name);
   const [goal, setGoal] = useState(String(profile.dailyGoal));
@@ -61,6 +61,15 @@ function SettingsPage() {
       <PageHeader title={t.settings.title} description={t.settings.description} />
 
       <form onSubmit={save} className="surface-lg grid gap-5 p-6 md:p-8">
+        <div className="grid gap-1.5">
+          <Label htmlFor="profile-email">{t.settings.email}</Label>
+          <Input
+            id="profile-email"
+            value={profile.email}
+            readOnly
+            className="h-11 rounded-2xl bg-background text-muted-foreground"
+          />
+        </div>
         <div className="grid gap-1.5">
           <Label htmlFor="profile-name">{t.settings.name}</Label>
           <Input
@@ -130,6 +139,12 @@ function SettingsPage() {
           </Button>
         </div>
       </form>
+
+      <div className="mt-4 flex justify-end">
+        <Button type="button" variant="outline" onClick={logout}>
+          {t.settings.logout}
+        </Button>
+      </div>
 
       <section className="mt-4 grid grid-cols-3 gap-3">
         <Mini label={t.settings.words} value={words.length} />

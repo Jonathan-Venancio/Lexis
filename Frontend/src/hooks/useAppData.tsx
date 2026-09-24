@@ -21,19 +21,23 @@ import type {
   WordInput,
 } from "@/types";
 import { ALL_DECK_ID } from "@/types";
-import { api, duplicateFrom } from "@/services/api";
+import { ApiError, api, duplicateFrom } from "@/services/api";
 import { preferences } from "@/services/preferences";
 import { normalizeWord } from "@/lib/text";
 import { applyGrade } from "@/lib/srs";
 
 export type AddWordResult = { ok: true; word: Word } | { ok: false; existing: Word };
 
-export const defaultProfile: Profile = { name: "", dailyGoal: 10, streakDays: 0 };
+export const defaultProfile: Profile = { name: "", email: "", dailyGoal: 10, streakDays: 0 };
 
 interface AppDataContextValue extends AppData {
   ready: boolean;
+  signedIn: boolean;
   loadError: string | null;
   reload: () => void;
+  login: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, name: string) => Promise<void>;
+  logout: () => void;
   theme: ThemeMode;
   toggleTheme: () => void;
   setTheme: (mode: ThemeMode) => void;
@@ -62,8 +66,19 @@ interface AppDataContextValue extends AppData {
 
 const AppDataContext = createContext<AppDataContextValue | null>(null);
 
+function emptyStudyData() {
+  return {
+    words: [] as Word[],
+    sentences: [] as Sentence[],
+    songs: [] as Song[],
+    decks: [] as Deck[],
+    profile: defaultProfile,
+  };
+}
+
 export function AppDataProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
+  const [signedIn, setSignedIn] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [words, setWords] = useState<Word[]>([]);
   const [sentences, setSentences] = useState<Sentence[]>([]);
@@ -88,6 +103,22 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setThemeState(initialTheme);
     document.documentElement.classList.toggle("dark", initialTheme === "dark");
 
+    const token = preferences.getToken();
+    if (!token) {
+      const empty = emptyStudyData();
+      setWords(empty.words);
+      setSentences(empty.sentences);
+      setSongs(empty.songs);
+      setDecks(empty.decks);
+      setProfile(empty.profile);
+      setSignedIn(false);
+      setLoadError(null);
+      setReady(true);
+      return () => {
+        cancelled = true;
+      };
+    }
+
     api
       .bootstrap()
       .then((data) => {
@@ -97,11 +128,25 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         setSongs(data.songs);
         setDecks(data.decks);
         setProfile(data.profile);
+        setSignedIn(true);
         setLoadError(null);
         setReady(true);
       })
-      .catch(() => {
+      .catch((error: unknown) => {
         if (cancelled) return;
+        if (error instanceof ApiError && error.status === 401) {
+          preferences.clearToken();
+          const empty = emptyStudyData();
+          setWords(empty.words);
+          setSentences(empty.sentences);
+          setSongs(empty.songs);
+          setDecks(empty.decks);
+          setProfile(empty.profile);
+          setSignedIn(false);
+          setLoadError(null);
+          setReady(true);
+          return;
+        }
         setLoadError("offline");
         setReady(false);
       });
@@ -247,11 +292,40 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setProfile(next);
   }, []);
 
+  const login = useCallback(async (email: string, password: string) => {
+    const session = await api.login(email, password);
+    preferences.setToken(session.token);
+    reload();
+  }, [reload]);
+
+  const register = useCallback(async (email: string, password: string, name: string) => {
+    const session = await api.register(email, password, name);
+    preferences.setToken(session.token);
+    reload();
+  }, [reload]);
+
+  const logout = useCallback(() => {
+    preferences.clearToken();
+    const empty = emptyStudyData();
+    setWords(empty.words);
+    setSentences(empty.sentences);
+    setSongs(empty.songs);
+    setDecks(empty.decks);
+    setProfile(empty.profile);
+    setSignedIn(false);
+    setLoadError(null);
+    setReady(true);
+  }, []);
+
   const value = useMemo<AppDataContextValue>(
     () => ({
       ready,
+      signedIn,
       loadError,
       reload,
+      login,
+      register,
+      logout,
       words,
       sentences,
       songs,
@@ -278,7 +352,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       updateProfile,
     }),
     [
-      ready, loadError, reload, words, sentences, songs, decks, profile, theme, toggleTheme, setTheme,
+      ready, signedIn, loadError, reload, login, register, logout, words, sentences, songs, decks, profile, theme, toggleTheme, setTheme,
       findDuplicate, addWord, updateWord, deleteWord, gradeWord,
       createDeck, deleteDeck, addWordsToDeck, removeWordFromDeck,
       addSentence, updateSentence, deleteSentence, addSong, updateSong, deleteSong,

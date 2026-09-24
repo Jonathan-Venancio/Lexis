@@ -40,6 +40,8 @@ Duas variáveis já vêm com valor de deploy, e as duas podem ser trocadas na ho
   O navegador do app chama a API em outro domínio. Sem esse valor, o browser bloqueia a resposta.
 - `DATABASE_URL=sqlite:///./data/lexis.db`
   Serve para um teste. No servidor, troque pela URL do Postgres: `postgresql+psycopg://USUARIO:SENHA@HOST:5432/lexis`.
+- `JWT_SECRET`
+  Segredo que assina o token de login. No EasyPanel, na API, coloque um valor longo e aleatório. Sem isso o container sobe com um segredo de desenvolvimento e um token pode ser forjado. Trocar o segredo desloga todo mundo.
 
 O arquivo `Backend/.dockerignore` impede que `.venv`, `.env` e o banco local entrem no build.
 

@@ -6,12 +6,26 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
 
 
-class Word(Base):
-    __tablename__ = "words"
+class User(Base):
+    __tablename__ = "users"
 
     id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    email: Mapped[str] = mapped_column(String(255), unique=True)
+    password_hash: Mapped[str] = mapped_column(String(255))
+    name: Mapped[str] = mapped_column(String(80))
+    daily_goal: Mapped[int] = mapped_column(Integer, default=10)
+    streak_days: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class Word(Base):
+    __tablename__ = "words"
+    __table_args__ = (UniqueConstraint("user_id", "term_key", name="uq_word_user_term"),)
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
     term: Mapped[str] = mapped_column(String(200))
-    term_key: Mapped[str] = mapped_column(String(200), unique=True)
+    term_key: Mapped[str] = mapped_column(String(200))
     translation: Mapped[str] = mapped_column(String(400))
     definition: Mapped[str] = mapped_column(Text, default="")
     example: Mapped[str] = mapped_column(Text, default="")
@@ -34,6 +48,7 @@ class Sentence(Base):
     __tablename__ = "sentences"
 
     id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
     text: Mapped[str] = mapped_column(Text)
     translation: Mapped[str | None] = mapped_column(Text, nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -44,6 +59,7 @@ class Song(Base):
     __tablename__ = "songs"
 
     id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
     title: Mapped[str] = mapped_column(String(300))
     artist: Mapped[str] = mapped_column(String(300))
     album: Mapped[str | None] = mapped_column(String(300), nullable=True)
@@ -59,6 +75,7 @@ class Deck(Base):
     __tablename__ = "decks"
 
     id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
     name: Mapped[str] = mapped_column(String(200))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 

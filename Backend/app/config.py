@@ -8,6 +8,8 @@ class Settings(BaseSettings):
 
     database_url: str = "sqlite:///./data/lexis.db"
     cors_origins: str = "http://127.0.0.1:8080,http://localhost:8080"
+    jwt_secret: str = "lexis-dev-secret-change-in-production"
+    jwt_expire_days: int = 30
 
     @property
     def is_sqlite(self) -> bool:

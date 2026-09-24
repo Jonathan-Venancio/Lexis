@@ -91,6 +91,7 @@ export interface Deck {
 
 export interface Profile {
   name: string;
+  email: string;
   dailyGoal: number;
   streakDays: number;
 }
