@@ -11,7 +11,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { useAppData } from "@/hooks/useAppData";
 import { useI18n } from "@/i18n";
 import type { Song, SongInput } from "@/types";
@@ -23,20 +22,19 @@ interface SongFormDialogProps {
   onSaved?: (song: Song) => void;
 }
 
-const empty: SongInput = {
+type SongMeta = Pick<SongInput, "title" | "artist" | "album" | "url">;
+
+const empty: SongMeta = {
   title: "",
   artist: "",
   album: "",
   url: "",
-  lyrics: "",
-  myTranslation: "",
-  referenceTranslation: "",
 };
 
 export function SongFormDialog({ open, onOpenChange, song, onSaved }: SongFormDialogProps) {
   const { addSong, updateSong } = useAppData();
   const { t } = useI18n();
-  const [form, setForm] = useState<SongInput>(empty);
+  const [form, setForm] = useState<SongMeta>(empty);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -48,18 +46,15 @@ export function SongFormDialog({ open, onOpenChange, song, onSaved }: SongFormDi
               artist: song.artist,
               album: song.album ?? "",
               url: song.url ?? "",
-              lyrics: song.lyrics,
-              myTranslation: song.myTranslation,
-              referenceTranslation: song.referenceTranslation,
             }
           : empty,
       );
     }
   }, [open, song]);
 
-  const set = <K extends keyof SongInput>(k: K, v: SongInput[K]) =>
+  const set = <K extends keyof SongMeta>(k: K, v: SongMeta[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
-  const canSave = form.title.trim() && form.artist.trim() && form.lyrics.trim() && !saving;
+  const canSave = form.title.trim() && form.artist.trim() && !saving;
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,7 +66,12 @@ export function SongFormDialog({ open, onOpenChange, song, onSaved }: SongFormDi
         toast.success(t.songForm.updated);
         onSaved?.({ ...song, ...form });
       } else {
-        const created = await addSong(form);
+        const created = await addSong({
+          ...form,
+          lyrics: "",
+          myTranslation: "",
+          referenceTranslation: "",
+        });
         toast.success(t.songForm.added(created.title));
         onSaved?.(created);
       }
@@ -85,7 +85,7 @@ export function SongFormDialog({ open, onOpenChange, song, onSaved }: SongFormDi
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-xl">
         <form onSubmit={submit} className="contents">
           <DialogHeader>
             <DialogTitle className="font-display text-2xl font-extrabold">
@@ -111,20 +111,6 @@ export function SongFormDialog({ open, onOpenChange, song, onSaved }: SongFormDi
               <div className="grid gap-1.5">
                 <Label htmlFor="song-url">{t.songForm.url}</Label>
                 <Input id="song-url" placeholder="https://" value={form.url ?? ""} onChange={(e) => set("url", e.target.value)} />
-              </div>
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="song-lyrics">{t.songForm.lyrics}</Label>
-              <Textarea id="song-lyrics" rows={6} className="font-mono text-sm" value={form.lyrics} onChange={(e) => set("lyrics", e.target.value)} />
-            </div>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="grid gap-1.5">
-                <Label htmlFor="song-mine">{t.songForm.mine}</Label>
-                <Textarea id="song-mine" rows={5} className="font-mono text-sm" value={form.myTranslation} onChange={(e) => set("myTranslation", e.target.value)} />
-              </div>
-              <div className="grid gap-1.5">
-                <Label htmlFor="song-ref">{t.songForm.reference}</Label>
-                <Textarea id="song-ref" rows={5} className="font-mono text-sm" value={form.referenceTranslation} onChange={(e) => set("referenceTranslation", e.target.value)} />
               </div>
             </div>
           </div>

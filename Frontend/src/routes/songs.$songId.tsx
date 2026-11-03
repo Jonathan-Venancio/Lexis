@@ -11,17 +11,18 @@ import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { SongFormDialog } from "@/components/songs/SongFormDialog";
 import { HighlightedSentence } from "@/components/sentences/HighlightedSentence";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
-type SongTab = "lyrics" | "translation" | "compare";
+type SongTab = "lyrics" | "official" | "translation" | "compare";
 
 export const Route = createFileRoute("/songs/$songId")({
   validateSearch: (search: Record<string, unknown>): { tab: SongTab } => {
     const tab = search["tab"];
-    if (tab === "lyrics" || tab === "translation" || tab === "compare") return { tab };
+    if (tab === "lyrics" || tab === "official" || tab === "translation" || tab === "compare") return { tab };
     return { tab: "lyrics" };
   },
   head: () => {
@@ -38,7 +39,7 @@ export const Route = createFileRoute("/songs/$songId")({
   component: SongDetailPage,
 });
 
-const tabIds: SongTab[] = ["lyrics", "translation", "compare"];
+const tabIds: SongTab[] = ["lyrics", "official", "translation", "compare"];
 
 const matchVariant = {
   correct: "mint-soft",
@@ -55,14 +56,19 @@ function SongDetailPage() {
   const { t } = useI18n();
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [draft, setDraft] = useState("");
-  const [draftStamp, setDraftStamp] = useState("");
+  const [lyricsEditing, setLyricsEditing] = useState(false);
+  const [officialEditing, setOfficialEditing] = useState(false);
+  const [editingFor, setEditingFor] = useState(songId);
 
   const song = songs.find((item) => item.id === songId);
-  const savedStamp = song ? `${song.id}:${song.updatedAt}` : "";
-  if (savedStamp !== draftStamp) {
-    setDraftStamp(savedStamp);
-    setDraft(song?.myTranslation ?? "");
+  const [lyricsDraft, setLyricsDraft] = useSyncedDraft(song?.lyrics ?? "");
+  const [mineDraft, setMineDraft] = useSyncedDraft(song?.myTranslation ?? "");
+  const [officialDraft, setOfficialDraft] = useSyncedDraft(song?.referenceTranslation ?? "");
+
+  if (editingFor !== songId) {
+    setEditingFor(songId);
+    setLyricsEditing(false);
+    setOfficialEditing(false);
   }
 
   if (!ready) return <PageLoading />;
@@ -84,6 +90,7 @@ function SongDetailPage() {
 
   const tabLabel: Record<SongTab, string> = {
     lyrics: t.song.lyrics,
+    official: t.song.official,
     translation: t.song.mine,
     compare: t.song.compare,
   };
@@ -137,7 +144,7 @@ function SongDetailPage() {
                 <Pencil />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>{t.common.edit}</TooltipContent>
+            <TooltipContent>{t.song.editLabel}</TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -169,14 +176,81 @@ function SongDetailPage() {
       </div>
 
       <div className="mt-5">
-        {tab === "lyrics" && <LyricsPanel lyrics={song.lyrics} />}
-        {tab === "translation" && (
-          <TranslationPanel
-            value={draft}
-            saved={song.myTranslation}
-            onChange={setDraft}
+        {tab === "lyrics" && (
+          <VersePanel
+            text={song.lyrics}
+            highlight
+            editing={lyricsEditing}
+            draft={lyricsDraft}
+            onDraft={setLyricsDraft}
+            onEdit={() => setLyricsEditing(true)}
+            onCancel={() => {
+              setLyricsDraft(song.lyrics);
+              setLyricsEditing(false);
+            }}
             onSave={() => {
-              void updateSong(song.id, { myTranslation: draft }).then(() => toast.success(t.song.savedToast));
+              void updateSong(song.id, { lyrics: lyricsDraft })
+                .then(() => {
+                  toast.success(t.song.lyricsSavedToast);
+                  setLyricsEditing(false);
+                })
+                .catch(() => toast.error(t.common.failed));
+            }}
+            title={t.song.lyricsTitle}
+            editLabel={t.song.lyricsEdit}
+            emptyLabel={t.song.lyricsEmpty}
+            hint={t.song.lyricsHint}
+            placeholder={t.song.lyricsPlaceholder}
+            saveLabel={t.song.lyricsSave}
+            savedLabel={t.song.lyricsSaved}
+          />
+        )}
+        {tab === "official" && (
+          <VersePanel
+            text={song.referenceTranslation}
+            editing={officialEditing}
+            draft={officialDraft}
+            onDraft={setOfficialDraft}
+            onEdit={() => setOfficialEditing(true)}
+            onCancel={() => {
+              setOfficialDraft(song.referenceTranslation);
+              setOfficialEditing(false);
+            }}
+            onSave={() => {
+              void updateSong(song.id, { referenceTranslation: officialDraft })
+                .then(() => {
+                  toast.success(t.song.officialSavedToast);
+                  setOfficialEditing(false);
+                })
+                .catch(() => toast.error(t.common.failed));
+            }}
+            title={t.song.officialTitle}
+            editLabel={t.song.officialEdit}
+            emptyLabel={t.song.officialEmpty}
+            hint={t.song.officialHint}
+            placeholder={t.song.officialPlaceholder}
+            saveLabel={t.song.save}
+            savedLabel={t.song.saved}
+          />
+        )}
+        {tab === "translation" && (
+          <AlignedTranslationPanel
+            lyrics={song.lyrics}
+            title={t.song.mineTitle}
+            hint={t.song.mineHint}
+            columnLabel={t.song.myTranslation}
+            placeholder={t.song.linePlaceholder}
+            emptyLabel={t.song.noLyricsForTranslation}
+            blankLabel={t.song.blankLine}
+            saveLabel={t.song.save}
+            savedLabel={t.song.saved}
+            value={mineDraft}
+            saved={song.myTranslation}
+            onChange={setMineDraft}
+            onSave={() => {
+              void updateSong(song.id, { myTranslation: mineDraft })
+                .then(() => toast.success(t.song.savedToast))
+                .catch(() => toast.error(t.common.failed));
             }}
           />
         )}
@@ -197,63 +271,295 @@ function SongDetailPage() {
   );
 }
 
-function LyricsPanel({ lyrics }: { lyrics: string }) {
+function useSyncedDraft(saved: string) {
+  const [draft, setDraft] = useState(saved);
+  const [seen, setSeen] = useState(saved);
+  if (saved !== seen) {
+    setSeen(saved);
+    setDraft(saved);
+  }
+  return [draft, setDraft] as const;
+}
+
+function VersePanel({
+  text,
+  highlight = false,
+  editing,
+  draft,
+  onDraft,
+  onEdit,
+  onCancel,
+  onSave,
+  title,
+  editLabel,
+  emptyLabel,
+  hint,
+  placeholder,
+  saveLabel,
+  savedLabel,
+}: {
+  text: string;
+  highlight?: boolean;
+  editing: boolean;
+  draft: string;
+  onDraft: (next: string) => void;
+  onEdit: () => void;
+  onCancel: () => void;
+  onSave: () => void;
+  title: string;
+  editLabel: string;
+  emptyLabel: string;
+  hint: string;
+  placeholder: string;
+  saveLabel: string;
+  savedLabel: string;
+}) {
   const { t } = useI18n();
-  const lines = splitLines(lyrics).filter((line) => line.trim().length > 0);
+  const lines = splitLines(text);
+  const hasText = lines.some((line) => line.trim().length > 0);
+  let verse = 0;
+
+  if (editing) {
+    return (
+      <TextDraftPanel
+        title={title}
+        hint={hint}
+        placeholder={placeholder}
+        saveLabel={saveLabel}
+        savedLabel={savedLabel}
+        value={draft}
+        saved={text}
+        onChange={onDraft}
+        onCancel={onCancel}
+        cancelLabel={t.common.cancel}
+        onSave={onSave}
+      />
+    );
+  }
+
   return (
     <div className="surface-lg p-6 md:p-8">
-      <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        {t.song.lyricsTitle}
+      <div className="flex items-center justify-between gap-3">
+        <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</div>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="outline" size="icon" aria-label={editLabel} onClick={onEdit}>
+              <Pencil />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{editLabel}</TooltipContent>
+        </Tooltip>
       </div>
-      <ol className="mt-4 grid gap-3">
-        {lines.map((line, index) => (
-          <li key={`${index}-${line}`} className="flex gap-4">
-            <span className="w-6 shrink-0 pt-1 text-xs font-bold text-muted-foreground">{index + 1}</span>
-            <p className="font-display text-xl font-bold leading-snug">
-              <HighlightedSentence text={line} interactive />
-            </p>
-          </li>
-        ))}
-      </ol>
+      {!hasText ? (
+        <p className="mt-6 text-sm text-muted-foreground">{emptyLabel}</p>
+      ) : (
+        <ol className="mt-4 grid gap-3">
+          {lines.map((line, index) => {
+            if (line.trim().length === 0) {
+              return <li key={`blank-${index}`} className="h-3" aria-hidden="true" />;
+            }
+            verse += 1;
+            return (
+              <li key={`${index}-${line}`} className="flex gap-4">
+                <span className="w-6 shrink-0 pt-1 text-xs font-bold text-muted-foreground">{verse}</span>
+                <p className="font-display text-xl font-bold leading-snug">
+                  {highlight ? <HighlightedSentence text={line} interactive /> : line}
+                </p>
+              </li>
+            );
+          })}
+        </ol>
+      )}
     </div>
   );
 }
 
-function TranslationPanel({
+function TextDraftPanel({
+  title,
+  hint,
+  placeholder,
+  saveLabel,
+  savedLabel,
   value,
   saved,
   onChange,
   onSave,
+  onCancel,
+  cancelLabel,
 }: {
+  title: string;
+  hint: string;
+  placeholder: string;
+  saveLabel: string;
+  savedLabel: string;
   value: string;
   saved: string;
   onChange: (next: string) => void;
   onSave: () => void;
+  onCancel?: () => void;
+  cancelLabel?: string;
 }) {
-  const { t } = useI18n();
   const dirty = value !== saved;
 
   return (
     <div className="surface-lg p-6 md:p-8">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            {t.song.mineTitle}
-          </div>
-          <p className="mt-1 text-sm text-muted-foreground">{t.song.mineHint}</p>
+          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</div>
+          <p className="mt-1 text-sm text-muted-foreground">{hint}</p>
         </div>
-        <Button variant="pop" disabled={!dirty} onClick={onSave}>
-          {dirty ? t.song.save : t.song.saved}
-        </Button>
+        <div className="flex gap-2">
+          {onCancel && (
+            <Button variant="ghost" onClick={onCancel}>
+              {cancelLabel}
+            </Button>
+          )}
+          <Button variant="pop" disabled={!dirty} onClick={onSave}>
+            {dirty ? saveLabel : savedLabel}
+          </Button>
+        </div>
       </div>
       <Textarea
         value={value}
         onChange={(event) => onChange(event.target.value)}
         rows={14}
         className="mt-4 rounded-2xl bg-background font-mono text-sm"
-        placeholder={t.song.placeholder}
-        aria-label={t.song.mineTitle}
+        placeholder={placeholder}
+        aria-label={title}
       />
+    </div>
+  );
+}
+
+function AlignedTranslationPanel({
+  lyrics,
+  title,
+  hint,
+  columnLabel,
+  placeholder,
+  emptyLabel,
+  blankLabel,
+  saveLabel,
+  savedLabel,
+  value,
+  saved,
+  onChange,
+  onSave,
+}: {
+  lyrics: string;
+  title: string;
+  hint: string;
+  columnLabel: string;
+  placeholder: string;
+  emptyLabel: string;
+  blankLabel: string;
+  saveLabel: string;
+  savedLabel: string;
+  value: string;
+  saved: string;
+  onChange: (next: string) => void;
+  onSave: () => void;
+}) {
+  const { t } = useI18n();
+  const original = splitLines(lyrics);
+  const mine = splitLines(value);
+  const hasLyrics = original.some((line) => line.trim().length > 0);
+  const dirty = value !== saved;
+
+  const writeLine = (index: number, text: string) => {
+    const next = original.map((line, i) => {
+      if (line.trim() === "") return "";
+      if (i === index) return text;
+      return mine[i] ?? "";
+    });
+    onChange(next.join("\n"));
+  };
+
+  const pasteFrom = (index: number, text: string) => {
+    const pasted = splitLines(text);
+    const next = original.map((line, i) => (line.trim() === "" ? "" : (mine[i] ?? "")));
+    let cursor = 0;
+    for (let i = index; i < original.length && cursor < pasted.length; i++) {
+      if (original[i].trim() === "") {
+        if (pasted[cursor].trim() === "") cursor += 1;
+        continue;
+      }
+      next[i] = pasted[cursor];
+      cursor += 1;
+    }
+    onChange(next.join("\n"));
+  };
+
+  const focusNext = (current: HTMLInputElement) => {
+    const root = current.closest("[data-aligned-translation]");
+    if (!root) return;
+    const inputs = [...root.querySelectorAll("input")];
+    const position = inputs.indexOf(current);
+    const next = inputs[position + 1];
+    if (next instanceof HTMLInputElement) next.focus();
+  };
+
+  return (
+    <div className="surface-lg p-6 md:p-8">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</div>
+          <p className="mt-1 text-sm text-muted-foreground">{hint}</p>
+        </div>
+        <Button variant="pop" disabled={!dirty || !hasLyrics} onClick={onSave}>
+          {dirty ? saveLabel : savedLabel}
+        </Button>
+      </div>
+
+      {!hasLyrics ? (
+        <p className="mt-6 text-sm text-muted-foreground">{emptyLabel}</p>
+      ) : (
+        <div className="mt-6" data-aligned-translation>
+          <div className="mb-2 hidden grid-cols-2 gap-6 px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground md:grid">
+            <div>{t.song.original}</div>
+            <div>{columnLabel}</div>
+          </div>
+          <ol className="grid">
+            {original.map((line, index) =>
+              line.trim() === "" ? (
+                <li key={`blank-${index}`} className="flex items-center gap-3 py-2" role="presentation">
+                  <span className="w-6 shrink-0 text-center text-xs font-bold text-muted-foreground">{index + 1}</span>
+                  <span className="h-px flex-1 bg-border" />
+                  <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{blankLabel}</span>
+                  <span className="h-px flex-1 bg-border" />
+                </li>
+              ) : (
+                <li key={`line-${index}`} className="grid gap-2 border-b border-border/70 py-3 last:border-0 md:grid-cols-2 md:items-center md:gap-6">
+                  <div className="flex gap-3">
+                    <span className="w-6 shrink-0 pt-1 text-center text-xs font-bold text-muted-foreground">{index + 1}</span>
+                    <p className="font-display text-lg font-bold leading-snug">
+                      <HighlightedSentence text={line} interactive />
+                    </p>
+                  </div>
+                  <Input
+                    value={mine[index] ?? ""}
+                    onChange={(event) => writeLine(index, event.target.value)}
+                    onPaste={(event) => {
+                      const text = event.clipboardData.getData("text");
+                      if (!text.includes("\n")) return;
+                      event.preventDefault();
+                      pasteFrom(index, text);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key !== "Enter") return;
+                      event.preventDefault();
+                      focusNext(event.currentTarget);
+                    }}
+                    placeholder={placeholder}
+                    aria-label={`${t.song.line(index + 1)}. ${line}`}
+                    className="h-11 rounded-xl bg-background"
+                  />
+                </li>
+              ),
+            )}
+          </ol>
+        </div>
+      )}
     </div>
   );
 }
