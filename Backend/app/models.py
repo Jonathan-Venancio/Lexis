@@ -1,6 +1,6 @@
-from datetime import datetime
+from datetime import date, datetime
 
-from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import Date, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -15,6 +15,7 @@ class User(Base):
     name: Mapped[str] = mapped_column(String(80))
     daily_goal: Mapped[int] = mapped_column(Integer, default=10)
     streak_days: Mapped[int] = mapped_column(Integer, default=0)
+    last_study_on: Mapped[date | None] = mapped_column(Date, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 

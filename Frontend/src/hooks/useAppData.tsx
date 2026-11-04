@@ -155,6 +155,33 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     };
   }, [reloadKey]);
 
+  const syncStreak = useCallback(() => {
+    void api.profile().then(setProfile).catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    if (!signedIn) return;
+    let timer = 0;
+    const schedule = () => {
+      const now = new Date();
+      const next = new Date(now);
+      next.setHours(24, 0, 0, 0);
+      timer = window.setTimeout(() => {
+        syncStreak();
+        schedule();
+      }, next.getTime() - now.getTime() + 500);
+    };
+    const onVisible = () => {
+      if (document.visibilityState === "visible") syncStreak();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    schedule();
+    return () => {
+      window.clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [signedIn, syncStreak]);
+
   const setTheme = useCallback((mode: ThemeMode) => {
     setThemeState(mode);
     preferences.setTheme(mode);
@@ -189,6 +216,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
             ),
           );
         }
+        syncStreak();
         return { ok: true, word };
       } catch (error) {
         const duplicate = duplicateFrom(error);
@@ -196,7 +224,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         throw error;
       }
     },
-    [findDuplicate],
+    [findDuplicate, syncStreak],
   );
 
   const updateWord = useCallback(async (id: string, input: Partial<WordInput>) => {
@@ -229,10 +257,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     const optimistic = applyGrade(word, grade);
     setWords((current) => current.map((item) => (item.id === id ? optimistic : item)));
     void api.gradeWord(id, grade).then(
-      (saved) => setWords((latest) => latest.map((item) => (item.id === id ? saved : item))),
+      (saved) => {
+        setWords((latest) => latest.map((item) => (item.id === id ? saved : item)));
+        syncStreak();
+      },
       () => setWords((latest) => latest.map((item) => (item.id === id ? word : item))),
     );
-  }, [words]);
+  }, [words, syncStreak]);
 
   const createDeck = useCallback(async (name: string, wordIds: string[]) => {
     const deck = await api.createDeck(name, wordIds);
@@ -280,7 +311,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const updateSong = useCallback(async (id: string, input: Partial<SongInput>) => {
     const song = await api.updateSong(id, input);
     setSongs((current) => current.map((item) => (item.id === id ? song : item)));
-  }, []);
+    if (input.myTranslation?.trim()) syncStreak();
+  }, [syncStreak]);
 
   const deleteSong = useCallback(async (id: string) => {
     await api.deleteSong(id);

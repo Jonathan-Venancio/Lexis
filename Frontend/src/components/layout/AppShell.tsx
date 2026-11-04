@@ -42,6 +42,23 @@ function Logo({ small }: { small?: boolean }) {
   );
 }
 
+function StreakBadge() {
+  const { profile } = useAppData();
+  const { t } = useI18n();
+  const count = t.streak.count(profile.streakDays);
+  return (
+    <div
+      className="flex items-center gap-1.5 rounded-full bg-sun/40 py-1 pl-1 pr-2.5 lg:hidden"
+      aria-label={`${count}, ${t.streak.label}`}
+    >
+      <span className="grid size-7 place-items-center rounded-full bg-sun text-sun-foreground">
+        <Flame className="size-3.5" />
+      </span>
+      <span className="font-display text-sm font-extrabold leading-none">{count}</span>
+    </div>
+  );
+}
+
 function ThemeToggle() {
   const { theme, toggleTheme } = useAppData();
   const { t } = useI18n();
@@ -146,6 +163,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
           <div className="hidden lg:block" />
           <div className="flex items-center gap-2">
+            <StreakBadge />
             <ThemeToggle />
             <Link
               to="/settings"

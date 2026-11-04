@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
@@ -9,6 +9,7 @@ from app.models import Song, User
 from app.routers.words import blank_to_none, new_id
 from app.schemas import SongOut, SongUpdate, SongWrite
 from app.security import get_current_user
+from app.streak import local_today, record_study
 
 router = APIRouter(prefix="/api/songs", tags=["songs"])
 
@@ -30,6 +31,7 @@ def create_song(
     payload: SongWrite,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    today: date = Depends(local_today),
 ) -> Song:
     title = payload.title.strip()
     artist = payload.artist.strip()
@@ -50,6 +52,8 @@ def create_song(
         updated_at=now,
     )
     db.add(song)
+    if payload.my_translation.strip():
+        record_study(user, today)
     db.commit()
     db.refresh(song)
     return song
@@ -61,9 +65,11 @@ def update_song(
     payload: SongUpdate,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    today: date = Depends(local_today),
 ) -> Song:
     song = get_song_or_404(db, song_id, user.id)
     data = payload.model_dump(exclude_unset=True)
+    translation_counts = False
     if "title" in data:
         title = (data["title"] or "").strip()
         if not title:
@@ -81,10 +87,14 @@ def update_song(
     if "lyrics" in data:
         song.lyrics = data["lyrics"] or ""
     if "my_translation" in data:
-        song.my_translation = data["my_translation"] or ""
+        next_translation = data["my_translation"] or ""
+        translation_counts = bool(next_translation.strip()) and next_translation != song.my_translation
+        song.my_translation = next_translation
     if "reference_translation" in data:
         song.reference_translation = data["reference_translation"] or ""
     song.updated_at = datetime.now(timezone.utc)
+    if translation_counts:
+        record_study(user, today)
     db.commit()
     db.refresh(song)
     return song

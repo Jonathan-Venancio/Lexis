@@ -20,11 +20,24 @@ function authHeader(): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+export function localStudyDate(): string {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${now.getFullYear()}-${month}-${day}`;
+}
+
+function studyHeader(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  return { "X-Local-Date": localStudyDate() };
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${base}${path}`, {
     ...init,
     headers: {
       ...authHeader(),
+      ...studyHeader(),
       ...(init?.body ? { "Content-Type": "application/json" } : {}),
       ...init?.headers,
     },
@@ -166,6 +179,10 @@ export const api = {
 
   async removeWordFromDeck(deckId: string, wordId: string): Promise<Deck> {
     return mapDeck(await request<Deck>(`/api/decks/${deckId}/words/${wordId}`, { method: "DELETE" }));
+  },
+
+  profile() {
+    return request<Profile>("/api/profile");
   },
 
   updateProfile(input: Partial<Profile>) {

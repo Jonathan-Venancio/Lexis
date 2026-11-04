@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -10,6 +10,7 @@ from app.models import Deck, DeckWord, User, Word
 from app.schemas import GradeIn, WordCreate, WordOut, WordUpdate
 from app.security import get_current_user
 from app.srs import apply_grade
+from app.streak import local_today, record_study
 
 router = APIRouter(prefix="/api/words", tags=["words"])
 
@@ -52,6 +53,7 @@ def create_word(
     deck_id: str | None = Query(default=None, alias="deckId"),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    today: date = Depends(local_today),
 ) -> Word:
     term = payload.term.strip()
     translation = payload.translation.strip()
@@ -92,6 +94,7 @@ def create_word(
     if deck is not None:
         last = db.scalar(select(func.max(DeckWord.position)).where(DeckWord.deck_id == deck.id))
         db.add(DeckWord(deck_id=deck.id, word_id=word.id, position=(last or 0) + 1))
+    record_study(user, today)
     db.commit()
     db.refresh(word)
     return word
@@ -147,9 +150,11 @@ def grade_word(
     payload: GradeIn,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    today: date = Depends(local_today),
 ) -> Word:
     word = get_word_or_404(db, word_id, user.id)
     apply_grade(word, payload.grade)
+    record_study(user, today)
     db.commit()
     db.refresh(word)
     return word
