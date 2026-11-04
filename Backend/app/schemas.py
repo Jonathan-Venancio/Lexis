@@ -151,6 +151,10 @@ class ProfileOut(APIModel):
     email: str
     daily_goal: int
     streak_days: int
+    email_reminders: bool
+    reminder_time: str
+    reminder_late_time: str | None = None
+    reminders_ready: bool
 
 
 class AuthIn(APIModel):
@@ -172,6 +176,9 @@ class AuthOut(APIModel):
 class ProfileUpdate(APIModel):
     name: str | None = None
     daily_goal: int | None = Field(default=None, ge=1, le=50)
+    email_reminders: bool | None = None
+    reminder_time: str | None = None
+    reminder_late_time: str | None = None
 
 
 class BootstrapOut(APIModel):

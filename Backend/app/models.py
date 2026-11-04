@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from sqlalchemy import Date, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -16,6 +16,13 @@ class User(Base):
     daily_goal: Mapped[int] = mapped_column(Integer, default=10)
     streak_days: Mapped[int] = mapped_column(Integer, default=0)
     last_study_on: Mapped[date | None] = mapped_column(Date, nullable=True)
+    timezone: Mapped[str] = mapped_column(String(64), default="UTC")
+    locale: Mapped[str] = mapped_column(String(8), default="pt")
+    email_reminders: Mapped[bool] = mapped_column(Boolean, default=False)
+    reminder_time: Mapped[str] = mapped_column(String(5), default="19:00")
+    reminder_late_time: Mapped[str | None] = mapped_column(String(5), nullable=True)
+    reminder_sent_on: Mapped[date | None] = mapped_column(Date, nullable=True)
+    reminder_late_sent_on: Mapped[date | None] = mapped_column(Date, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 

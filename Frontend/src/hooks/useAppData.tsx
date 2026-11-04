@@ -28,7 +28,16 @@ import { applyGrade } from "@/lib/srs";
 
 export type AddWordResult = { ok: true; word: Word } | { ok: false; existing: Word };
 
-export const defaultProfile: Profile = { name: "", email: "", dailyGoal: 10, streakDays: 0 };
+export const defaultProfile: Profile = {
+  name: "",
+  email: "",
+  dailyGoal: 10,
+  streakDays: 0,
+  emailReminders: false,
+  reminderTime: "19:00",
+  reminderLateTime: null,
+  remindersReady: false,
+};
 
 interface AppDataContextValue extends AppData {
   ready: boolean;

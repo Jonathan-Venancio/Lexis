@@ -24,6 +24,12 @@ class Settings(BaseSettings):
     cors_origins: str = "http://127.0.0.1:8080,http://localhost:8080"
     jwt_secret: str = "lexis-dev-secret-change-in-production"
     jwt_expire_days: int = 30
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_from: str = ""
+    app_url: str = "https://lexis.jonathanvenancio.site"
 
     @model_validator(mode="after")
     def apply_split_database(self) -> "Settings":
@@ -44,6 +50,14 @@ class Settings(BaseSettings):
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+
+    @property
+    def smtp_configured(self) -> bool:
+        return bool(self.smtp_host and self.smtp_user and self.smtp_password)
+
+    @property
+    def mail_from(self) -> str:
+        return self.smtp_from or self.smtp_user
 
 
 @lru_cache

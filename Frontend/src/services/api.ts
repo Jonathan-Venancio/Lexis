@@ -29,7 +29,17 @@ export function localStudyDate(): string {
 
 function studyHeader(): Record<string, string> {
   if (typeof window === "undefined") return {};
-  return { "X-Local-Date": localStudyDate() };
+  let zone = "UTC";
+  try {
+    zone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  } catch {
+    zone = "UTC";
+  }
+  return {
+    "X-Local-Date": localStudyDate(),
+    "X-Timezone": zone,
+    "X-Locale": preferences.getLocale(),
+  };
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {

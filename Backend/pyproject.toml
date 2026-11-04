@@ -29,3 +29,4 @@ package-mode = false
 backend = "bash scripts/backend.sh"
 frontend = "bash scripts/frontend.sh"
 run = "bash scripts/dev_terminals.sh"
+reminders = "python -m app.reminders"

@@ -1,4 +1,7 @@
+import os
 from datetime import datetime, timezone
+
+os.environ["REMINDERS_LOOP"] = "0"
 
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine

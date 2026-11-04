@@ -44,3 +44,5 @@ O driver `psycopg` já está nas dependências. O restante do código não muda.
 As imagens de deploy são publicadas no Docker Hub pelo GitHub Actions. O passo a passo está em [docs/publicar-imagens-no-docker-hub.md](../docs/publicar-imagens-no-docker-hub.md).
 
 No servidor, defina `JWT_SECRET` com um valor longo e aleatório. Ele assina o token de login. Sem essa variável o processo sobe, mas qualquer pessoa que conheça o segredo padrão consegue forjar um token.
+
+Os lembretes por e-mail usam o SMTP do Google. Defina `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=587`, `SMTP_USER` com o Gmail e `SMTP_PASSWORD` com a senha de app. `SMTP_FROM` e `APP_URL` são opcionais. Com isso configurado, a API verifica os horários a cada cinco minutos. `poetry run python -m app.reminders` faz a mesma verificação uma vez.

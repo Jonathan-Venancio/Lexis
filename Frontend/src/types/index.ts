@@ -94,6 +94,10 @@ export interface Profile {
   email: string;
   dailyGoal: number;
   streakDays: number;
+  emailReminders: boolean;
+  reminderTime: string;
+  reminderLateTime?: string | null;
+  remindersReady: boolean;
 }
 
 export type ThemeMode = "light" | "dark";
