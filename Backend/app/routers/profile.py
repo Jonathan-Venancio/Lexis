@@ -1,3 +1,4 @@
+import logging
 import re
 from datetime import date
 from typing import Annotated
@@ -9,9 +10,12 @@ from sqlalchemy.orm import Session
 from app.config import get_settings
 from app.database import get_db
 from app.models import User
+from app.reminders import send_test_reminder
 from app.schemas import ProfileOut, ProfileUpdate
 from app.security import get_current_user
 from app.streak import local_today, visible_streak
+
+logger = logging.getLogger("lexis.reminders")
 
 CLOCK = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
 
@@ -96,3 +100,14 @@ def update_profile(
     db.commit()
     db.refresh(user)
     return to_profile(user, today)
+
+
+@router.post("/reminders/test", status_code=204)
+def send_reminder_test(user: User = Depends(get_current_user)) -> None:
+    if not get_settings().smtp_configured:
+        raise HTTPException(status_code=503, detail="Email delivery is not configured")
+    try:
+        send_test_reminder(user)
+    except Exception:
+        logger.exception("test reminder failed for %s", user.id)
+        raise HTTPException(status_code=502, detail="Could not send the test email") from None

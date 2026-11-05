@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     smtp_password: str = ""
     smtp_from: str = ""
     app_url: str = "https://lexis.jonathanvenancio.site"
+    default_timezone: str = ""
 
     @model_validator(mode="after")
     def apply_split_database(self) -> "Settings":

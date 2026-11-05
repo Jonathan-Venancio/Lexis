@@ -1,10 +1,12 @@
 from datetime import datetime, timezone
+from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import select
 
+from app.config import get_settings
 from app.models import User
-from app.reminders import run_reminders
+from app.reminders import local_now, run_reminders
 from tests.test_api import PASSWORD, TestingSession, client
 
 SAO_PAULO = ZoneInfo("America/Sao_Paulo")
@@ -90,6 +92,51 @@ def test_a_missed_window_sends_only_the_later_message():
     assert user.reminder_sent_on is not None
     assert user.reminder_late_sent_on is not None
     db.close()
+
+
+def test_default_timezone_overrides_the_account_clock():
+    settings = get_settings()
+    previous = settings.default_timezone
+    settings.default_timezone = "Europe/Lisbon"
+    try:
+        user = User(
+            id="u",
+            email="a@b.co",
+            password_hash="x",
+            name="Lia",
+            daily_goal=10,
+            streak_days=0,
+            timezone="America/Sao_Paulo",
+            created_at=datetime(2026, 11, 5, tzinfo=timezone.utc),
+        )
+        local = local_now(user, datetime(2026, 11, 5, 11, 20, tzinfo=timezone.utc))
+        assert local.hour == 11
+        assert local.minute == 20
+    finally:
+        settings.default_timezone = previous
+
+
+def test_test_email_uses_the_logged_in_account():
+    created = client.post(
+        "/api/auth/register",
+        json={"email": "remind-test@example.com", "password": PASSWORD, "name": "Lia"},
+    )
+    token = {"Authorization": f"Bearer {created.json()['token']}"}
+    blocked = client.post("/api/profile/reminders/test", headers=token)
+    assert blocked.status_code == 503
+
+    settings = get_settings()
+    previous = (settings.smtp_host, settings.smtp_user, settings.smtp_password)
+    settings.smtp_host = "smtp.gmail.com"
+    settings.smtp_user = "sender@gmail.com"
+    settings.smtp_password = "app-password"
+    try:
+        with patch("app.reminders.send_email") as send:
+            sent = client.post("/api/profile/reminders/test", headers=token)
+        assert sent.status_code == 204
+        assert send.call_args.args[0] == "remind-test@example.com"
+    finally:
+        settings.smtp_host, settings.smtp_user, settings.smtp_password = previous
 
 
 def test_profile_stores_both_times_and_rejects_a_late_hour_that_comes_first():

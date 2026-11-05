@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useAppData } from "@/hooks/useAppData";
+import { api } from "@/services/api";
 import { messagesFor, readLocale, useI18n, type Locale } from "@/i18n";
 import { PageHeader, PageLoading } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ export const Route = createFileRoute("/settings")({
 
 function SettingsPage() {
   const { ready, profile, words, sentences, songs, theme, setTheme, updateProfile, logout } = useAppData();
+  const [sendingTest, setSendingTest] = useState(false);
   const { t, locale, setLocale } = useI18n();
   const [name, setName] = useState(profile.name);
   const [goal, setGoal] = useState(String(profile.dailyGoal));
@@ -195,6 +197,23 @@ function SettingsPage() {
               )}
             </div>
           )}
+          <div>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={sendingTest}
+              onClick={() => {
+                setSendingTest(true);
+                void api
+                  .sendTestReminder()
+                  .then(() => toast.success(t.settings.reminderTestSent))
+                  .catch(() => toast.error(t.settings.reminderTestFailed))
+                  .finally(() => setSendingTest(false));
+              }}
+            >
+              {t.settings.reminderTest}
+            </Button>
+          </div>
         </div>
         <div className="flex justify-end">
           <Button type="submit" variant="pop" disabled={!canSave}>

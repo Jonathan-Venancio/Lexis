@@ -106,14 +106,27 @@ def reminder_copy(user: User, slot: str, today: date, streak: int) -> tuple[str,
     return hook, f"{hook}\n\n{url}\n"
 
 
-def local_now(user: User, now: datetime) -> datetime:
+def reminder_zone(user: User) -> ZoneInfo:
+    configured = get_settings().default_timezone.strip()
+    name = configured or user.timezone or "UTC"
     try:
-        zone = ZoneInfo(user.timezone or "UTC")
+        return ZoneInfo(name)
     except ZoneInfoNotFoundError:
-        zone = ZoneInfo("UTC")
+        return ZoneInfo("UTC")
+
+
+def local_now(user: User, now: datetime) -> datetime:
     if now.tzinfo is None:
         now = now.replace(tzinfo=timezone.utc)
-    return now.astimezone(zone)
+    return now.astimezone(reminder_zone(user))
+
+
+def send_test_reminder(user: User, *, now: datetime | None = None, send=None) -> None:
+    moment = now or datetime.now(timezone.utc)
+    local = local_now(user, moment)
+    streak = visible_streak(user.streak_days, user.last_study_on, local.date())
+    subject, body = reminder_copy(user, "free", local.date(), streak)
+    (send or send_email)(user.email, subject, body)
 
 
 def clock_reached(now: datetime, clock: str) -> bool:
