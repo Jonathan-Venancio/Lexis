@@ -121,14 +121,6 @@ def local_now(user: User, now: datetime) -> datetime:
     return now.astimezone(reminder_zone(user))
 
 
-def send_test_reminder(user: User, *, now: datetime | None = None, send=None) -> None:
-    moment = now or datetime.now(timezone.utc)
-    local = local_now(user, moment)
-    streak = visible_streak(user.streak_days, user.last_study_on, local.date())
-    subject, body = reminder_copy(user, "free", local.date(), streak)
-    (send or send_email)(user.email, subject, body)
-
-
 def clock_reached(now: datetime, clock: str) -> bool:
     hour, minute = (int(part) for part in clock.split(":", 1))
     return now.hour * 60 + now.minute >= hour * 60 + minute

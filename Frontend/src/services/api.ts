@@ -195,10 +195,6 @@ export const api = {
     return request<Profile>("/api/profile");
   },
 
-  sendTestReminder() {
-    return request<void>("/api/profile/reminders/test", { method: "POST" });
-  },
-
   updateProfile(input: Partial<Profile>) {
     return request<Profile>("/api/profile", { method: "PATCH", body: JSON.stringify(input) });
   },

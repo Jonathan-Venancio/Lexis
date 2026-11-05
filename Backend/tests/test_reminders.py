@@ -1,5 +1,4 @@
 from datetime import datetime, timezone
-from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import select
@@ -114,29 +113,6 @@ def test_default_timezone_overrides_the_account_clock():
         assert local.minute == 20
     finally:
         settings.default_timezone = previous
-
-
-def test_test_email_uses_the_logged_in_account():
-    created = client.post(
-        "/api/auth/register",
-        json={"email": "remind-test@example.com", "password": PASSWORD, "name": "Lia"},
-    )
-    token = {"Authorization": f"Bearer {created.json()['token']}"}
-    blocked = client.post("/api/profile/reminders/test", headers=token)
-    assert blocked.status_code == 503
-
-    settings = get_settings()
-    previous = (settings.smtp_host, settings.smtp_user, settings.smtp_password)
-    settings.smtp_host = "smtp.gmail.com"
-    settings.smtp_user = "sender@gmail.com"
-    settings.smtp_password = "app-password"
-    try:
-        with patch("app.reminders.send_email") as send:
-            sent = client.post("/api/profile/reminders/test", headers=token)
-        assert sent.status_code == 204
-        assert send.call_args.args[0] == "remind-test@example.com"
-    finally:
-        settings.smtp_host, settings.smtp_user, settings.smtp_password = previous
 
 
 def test_profile_stores_both_times_and_rejects_a_late_hour_that_comes_first():
