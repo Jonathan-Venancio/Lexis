@@ -13,6 +13,7 @@ dependencies = [
     "psycopg[binary]>=3.2.0",
     "bcrypt (>=4.2)",
     "pyjwt (>=2.10)",
+    "pywebpush (>=2.0.0)",
 ]
 
 [dependency-groups]
@@ -30,3 +31,4 @@ backend = "bash scripts/backend.sh"
 frontend = "bash scripts/frontend.sh"
 run = "bash scripts/dev_terminals.sh"
 reminders = "python -m app.reminders"
+vapid = "python -m app.push"

@@ -25,6 +25,24 @@ class User(Base):
     reminder_late_sent_on: Mapped[date | None] = mapped_column(Date, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
+    push_subscriptions: Mapped[list["PushSubscription"]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+
+
+class PushSubscription(Base):
+    __tablename__ = "push_subscriptions"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    endpoint: Mapped[str] = mapped_column(Text, unique=True)
+    p256dh: Mapped[str] = mapped_column(String(255))
+    auth: Mapped[str] = mapped_column(String(255))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+    user: Mapped[User] = relationship(back_populates="push_subscriptions")
+
 
 class Word(Base):
     __tablename__ = "words"

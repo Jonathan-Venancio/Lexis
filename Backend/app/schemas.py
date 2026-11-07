@@ -155,6 +155,8 @@ class ProfileOut(APIModel):
     reminder_time: str
     reminder_late_time: str | None = None
     reminders_ready: bool
+    push_ready: bool
+    push_public_key: str = ""
 
 
 class AuthIn(APIModel):
@@ -171,6 +173,16 @@ class AuthUser(APIModel):
 class AuthOut(APIModel):
     token: str
     user: AuthUser
+
+
+class PushSubscriptionIn(APIModel):
+    endpoint: str = Field(min_length=12, max_length=2000)
+    p256dh: str = Field(min_length=8, max_length=255)
+    auth: str = Field(min_length=8, max_length=255)
+
+
+class PushEndpointIn(APIModel):
+    endpoint: str = Field(min_length=12, max_length=2000)
 
 
 class ProfileUpdate(APIModel):

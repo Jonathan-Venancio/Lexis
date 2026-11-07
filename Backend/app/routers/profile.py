@@ -1,15 +1,17 @@
 import re
-from datetime import date
+from datetime import date, datetime, timezone
 from typing import Annotated
+from uuid import uuid4
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from fastapi import APIRouter, Depends, Header, HTTPException
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.database import get_db
-from app.models import User
-from app.schemas import ProfileOut, ProfileUpdate
+from app.models import PushSubscription, User
+from app.schemas import ProfileOut, ProfileUpdate, PushEndpointIn, PushSubscriptionIn
 from app.security import get_current_user
 from app.streak import local_today, visible_streak
 
@@ -28,6 +30,8 @@ def to_profile(user: User, today: date) -> ProfileOut:
         reminder_time=user.reminder_time,
         reminder_late_time=user.reminder_late_time,
         reminders_ready=get_settings().smtp_configured,
+        push_ready=get_settings().vapid_configured,
+        push_public_key=get_settings().vapid_public_key if get_settings().vapid_configured else "",
     )
 
 
@@ -96,3 +100,49 @@ def update_profile(
     db.commit()
     db.refresh(user)
     return to_profile(user, today)
+
+
+def require_https_endpoint(value: str) -> str:
+    endpoint = value.strip()
+    if not endpoint.startswith("https://") or any(char.isspace() for char in endpoint):
+        raise HTTPException(status_code=422, detail="Invalid push endpoint")
+    return endpoint
+
+
+@router.post("/push", status_code=204)
+def save_push_subscription(
+    payload: PushSubscriptionIn,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> None:
+    endpoint = require_https_endpoint(payload.endpoint)
+    existing = db.scalar(select(PushSubscription).where(PushSubscription.endpoint == endpoint))
+    if existing is None:
+        db.add(
+            PushSubscription(
+                id=f"ps_{uuid4().hex[:12]}",
+                user_id=user.id,
+                endpoint=endpoint,
+                p256dh=payload.p256dh.strip(),
+                auth=payload.auth.strip(),
+                created_at=datetime.now(timezone.utc),
+            )
+        )
+    else:
+        existing.user_id = user.id
+        existing.p256dh = payload.p256dh.strip()
+        existing.auth = payload.auth.strip()
+    db.commit()
+
+
+@router.delete("/push", status_code=204)
+def delete_push_subscription(
+    payload: PushEndpointIn,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> None:
+    endpoint = require_https_endpoint(payload.endpoint)
+    existing = db.scalar(select(PushSubscription).where(PushSubscription.endpoint == endpoint))
+    if existing is not None and existing.user_id == user.id:
+        db.delete(existing)
+        db.commit()

@@ -1,4 +1,4 @@
-const CACHE = "lexis-v1";
+const CACHE = "lexis-v2";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(["/", "/manifest.webmanifest"])));
@@ -40,6 +40,36 @@ async function fromCacheThenNetwork(request) {
     .catch(() => cached);
   return cached || network;
 }
+
+self.addEventListener("push", (event) => {
+  const payload = { title: "Lexis", body: "", url: "/" };
+  try {
+    if (event.data) Object.assign(payload, event.data.json());
+  } catch {
+    payload.body = event.data ? event.data.text() : "";
+  }
+  event.waitUntil(
+    self.registration.showNotification(payload.title || "Lexis", {
+      body: payload.body || "",
+      icon: "/icons/icon-192.png",
+      badge: "/icons/icon-192.png",
+      data: { url: payload.url || "/" },
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const target = new URL(event.notification.data?.url || "/", self.location.origin).href;
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((windows) => {
+      for (const client of windows) {
+        if (client.url.startsWith(self.location.origin) && "focus" in client) return client.focus();
+      }
+      return self.clients.openWindow(target);
+    }),
+  );
+});
 
 async function fromNetworkThenCache(request) {
   const cache = await caches.open(CACHE);

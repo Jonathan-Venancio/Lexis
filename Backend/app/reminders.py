@@ -4,13 +4,14 @@ import threading
 from datetime import date, datetime, timezone
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy import or_, select
+from sqlalchemy.orm import Session, selectinload
 
 from app.config import get_settings
 from app.database import SessionLocal
 from app.mail import send_email
-from app.models import User
+from app.models import PushSubscription, User
+from app.push import send_web_pushes
 from app.streak import visible_streak
 
 logger = logging.getLogger("lexis.reminders")
@@ -126,17 +127,27 @@ def clock_reached(now: datetime, clock: str) -> bool:
     return now.hour * 60 + now.minute >= hour * 60 + minute
 
 
-def run_reminders(db: Session, *, now: datetime | None = None, send=send_email) -> int:
+def reminder_users(db: Session, *, include_push: bool) -> list[User]:
+    stmt = select(User).options(selectinload(User.push_subscriptions))
+    if include_push:
+        push_ids = select(PushSubscription.user_id)
+        stmt = stmt.where(or_(User.email_reminders.is_(True), User.id.in_(push_ids)))
+    else:
+        stmt = stmt.where(User.email_reminders.is_(True))
+    return list(db.scalars(stmt))
+
+
+def run_reminders(db: Session, *, now: datetime | None = None, send=send_email, push=None) -> int:
     moment = now or datetime.now(timezone.utc)
+    push_fn = push if push is not None else (send_web_pushes if get_settings().vapid_configured else None)
     sent = 0
-    users = list(db.scalars(select(User).where(User.email_reminders.is_(True))))
-    for user in users:
-        if deliver_reminder(db, user, moment, send):
+    for user in reminder_users(db, include_push=push_fn is not None):
+        if deliver_reminder(db, user, moment, send, push_fn):
             sent += 1
     return sent
 
 
-def deliver_reminder(db: Session, user: User, now: datetime, send) -> bool:
+def deliver_reminder(db: Session, user: User, now: datetime, send, push) -> bool:
     local = local_now(user, now)
     today = local.date()
     if user.last_study_on == today:
@@ -146,14 +157,37 @@ def deliver_reminder(db: Session, user: User, now: datetime, send) -> bool:
     late_due = bool(late_clock) and clock_reached(local, late_clock) and user.reminder_late_sent_on != today
     if not first_due and not late_due:
         return False
+    subs = list(user.push_subscriptions) if push is not None else []
+    wants_email = user.email_reminders
+    wants_push = bool(subs)
+    if not wants_email and not wants_push:
+        return False
     slot = "late" if late_due else "free"
     streak = visible_streak(user.streak_days, user.last_study_on, today)
     subject, body = reminder_copy(user, slot, today, streak)
-    try:
-        send(user.email, subject, body)
-    except Exception:
-        logger.exception("reminder email failed for %s", user.id)
-        db.rollback()
+    url = get_settings().app_url.rstrip("/") or "/"
+    email_ok = False
+    push_ok = False
+    gone: list[str] = []
+    if wants_email:
+        try:
+            send(user.email, subject, body)
+            email_ok = True
+        except Exception:
+            logger.exception("reminder email failed for %s", user.id)
+    if wants_push:
+        try:
+            delivered, gone = push(subs, "Lexis", subject, url)
+            push_ok = delivered > 0
+        except Exception:
+            logger.exception("reminder push failed for %s", user.id)
+    gone_ids = set(gone)
+    if gone_ids:
+        for sub in subs:
+            if sub.id in gone_ids:
+                db.delete(sub)
+    if not email_ok and not push_ok:
+        db.commit()
         return False
     if first_due:
         user.reminder_sent_on = today
@@ -168,7 +202,8 @@ def should_loop() -> bool:
         return False
     if os.environ.get("REMINDERS_LOOP", "1") == "0":
         return False
-    return get_settings().smtp_configured
+    settings = get_settings()
+    return settings.smtp_configured or settings.vapid_configured
 
 
 def reminder_loop(stop: threading.Event) -> None:
@@ -178,15 +213,16 @@ def reminder_loop(stop: threading.Event) -> None:
             with SessionLocal() as db:
                 count = run_reminders(db)
             if count:
-                logger.info("sent %s reminder email(s)", count)
+                logger.info("sent %s reminder(s)", count)
         except Exception:
             logger.exception("reminder loop failed")
         stop.wait(300)
 
 
 def main() -> int:
-    if not get_settings().smtp_configured:
-        print("SMTP is not configured")
+    settings = get_settings()
+    if not settings.smtp_configured and not settings.vapid_configured:
+        print("SMTP and push are not configured")
         return 1
     with SessionLocal() as db:
         count = run_reminders(db)

@@ -37,6 +37,8 @@ export const defaultProfile: Profile = {
   reminderTime: "19:00",
   reminderLateTime: null,
   remindersReady: false,
+  pushReady: false,
+  pushPublicKey: "",
 };
 
 interface AppDataContextValue extends AppData {

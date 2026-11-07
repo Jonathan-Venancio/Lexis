@@ -9,6 +9,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
+import { api } from "@/services/api";
+import {
+  deviceHasPushSubscription,
+  pushSupport,
+  subscribeOnThisDevice,
+  unsubscribeOnThisDevice,
+  type PushSupport,
+} from "@/services/push";
 
 export const Route = createFileRoute("/settings")({
   head: () => {
@@ -35,6 +43,8 @@ function SettingsPage() {
   const [lateOn, setLateOn] = useState(Boolean(profile.reminderLateTime));
   const [lateTime, setLateTime] = useState(profile.reminderLateTime || "23:00");
   const [saving, setSaving] = useState(false);
+  const [pushBusy, setPushBusy] = useState(false);
+  const [pushDevice, setPushDevice] = useState<PushSupport | "on" | "off" | "denied">("off");
 
   useEffect(() => {
     setName(profile.name);
@@ -44,6 +54,51 @@ function SettingsPage() {
     setLateOn(Boolean(profile.reminderLateTime));
     setLateTime(profile.reminderLateTime || "23:00");
   }, [profile]);
+
+  useEffect(() => {
+    const support = pushSupport();
+    if (support !== "ok") {
+      setPushDevice(support);
+      return;
+    }
+    if (Notification.permission === "denied") {
+      setPushDevice("denied");
+      return;
+    }
+    void deviceHasPushSubscription()
+      .then((active) => setPushDevice(active ? "on" : "off"))
+      .catch(() => setPushDevice("off"));
+  }, []);
+
+  const enablePush = async () => {
+    if (!profile.pushReady || !profile.pushPublicKey || pushBusy) return;
+    setPushBusy(true);
+    try {
+      const keys = await subscribeOnThisDevice(profile.pushPublicKey);
+      await api.savePushSubscription(keys);
+      setPushDevice("on");
+      toast.success(t.settings.pushSaved);
+    } catch (error) {
+      if (error instanceof Error && error.message === "denied") setPushDevice("denied");
+      toast.error(error instanceof Error && error.message === "denied" ? t.settings.pushDenied : t.settings.pushFailed);
+    } finally {
+      setPushBusy(false);
+    }
+  };
+
+  const disablePush = async () => {
+    if (pushBusy) return;
+    setPushBusy(true);
+    try {
+      const endpoint = await unsubscribeOnThisDevice();
+      if (endpoint) await api.deletePushSubscription(endpoint);
+      setPushDevice("off");
+    } catch {
+      toast.error(t.common.failed);
+    } finally {
+      setPushBusy(false);
+    }
+  };
 
   if (!ready) return <PageLoading />;
 
@@ -158,7 +213,31 @@ function SettingsPage() {
             </div>
             <Switch checked={emailOn} onCheckedChange={setEmailOn} aria-label={t.settings.reminders} />
           </div>
-          {emailOn && (
+          <div className="flex items-start justify-between gap-4 border-t border-border pt-4">
+            <div>
+              <div className="text-sm font-semibold">{t.settings.push}</div>
+              <p className="mt-1 text-xs text-muted-foreground">{t.settings.pushHint}</p>
+              {pushDevice === "on" && <p className="mt-1 text-xs text-muted-foreground">{t.settings.pushOn}</p>}
+              {pushDevice === "denied" && <p className="mt-1 text-xs font-semibold text-coral">{t.settings.pushDenied}</p>}
+              {pushDevice === "unsupported" && (
+                <p className="mt-1 text-xs text-muted-foreground">{t.settings.pushUnsupported}</p>
+              )}
+              {pushDevice === "ios" && <p className="mt-1 text-xs text-muted-foreground">{t.settings.pushIos}</p>}
+              {!profile.pushReady && <p className="mt-1 text-xs text-muted-foreground">{t.settings.pushNotReady}</p>}
+            </div>
+            {(pushDevice === "on" || pushDevice === "off") && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={pushBusy || !profile.pushReady}
+                onClick={pushDevice === "on" ? disablePush : enablePush}
+              >
+                {pushDevice === "on" ? t.settings.pushDisable : t.settings.pushEnable}
+              </Button>
+            )}
+          </div>
+          {(emailOn || pushDevice === "on") && (
             <div className="grid gap-4">
               <div className="grid gap-1.5">
                 <Label htmlFor="reminder-time">{t.settings.reminderTime}</Label>
@@ -190,7 +269,7 @@ function SettingsPage() {
                   {!orderOk && <p className="text-xs font-semibold text-coral">{t.settings.reminderOrder}</p>}
                 </div>
               )}
-              {!profile.remindersReady && (
+              {emailOn && !profile.remindersReady && (
                 <p className="text-xs text-muted-foreground">{t.settings.remindersNotReady}</p>
               )}
             </div>

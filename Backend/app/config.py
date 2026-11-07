@@ -31,6 +31,9 @@ class Settings(BaseSettings):
     smtp_from: str = ""
     app_url: str = "https://lexis.jonathanvenancio.site"
     default_timezone: str = ""
+    vapid_public_key: str = ""
+    vapid_private_key: str = ""
+    vapid_subject: str = ""
 
     @model_validator(mode="after")
     def apply_split_database(self) -> "Settings":
@@ -59,6 +62,21 @@ class Settings(BaseSettings):
     @property
     def mail_from(self) -> str:
         return self.smtp_from or self.smtp_user
+
+    @property
+    def vapid_configured(self) -> bool:
+        return bool(self.vapid_public_key and self.vapid_private_key)
+
+    @property
+    def vapid_mailto(self) -> str:
+        subject = self.vapid_subject.strip()
+        if subject.startswith("mailto:") or subject.startswith("https://"):
+            return subject
+        if "@" in subject:
+            return f"mailto:{subject}"
+        if "@" in self.smtp_user:
+            return f"mailto:{self.smtp_user}"
+        return "mailto:lexis@localhost"
 
 
 @lru_cache

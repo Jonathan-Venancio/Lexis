@@ -198,6 +198,14 @@ export const api = {
   updateProfile(input: Partial<Profile>) {
     return request<Profile>("/api/profile", { method: "PATCH", body: JSON.stringify(input) });
   },
+
+  savePushSubscription(input: { endpoint: string; p256dh: string; auth: string }) {
+    return request<void>("/api/profile/push", { method: "POST", body: JSON.stringify(input) });
+  },
+
+  deletePushSubscription(endpoint: string) {
+    return request<void>("/api/profile/push", { method: "DELETE", body: JSON.stringify({ endpoint }) });
+  },
 };
 
 export function duplicateFrom(error: unknown): Word | undefined {

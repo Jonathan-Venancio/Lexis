@@ -98,6 +98,8 @@ export interface Profile {
   reminderTime: string;
   reminderLateTime?: string | null;
   remindersReady: boolean;
+  pushReady: boolean;
+  pushPublicKey: string;
 }
 
 export type ThemeMode = "light" | "dark";
